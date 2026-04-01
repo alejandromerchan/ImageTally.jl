@@ -1,0 +1,42 @@
+# Changes here will be overwritten by Copier
+AddAllcontributors: true
+AddCitationCFF: true
+AddCodeOfConduct: true
+AddContributionDocs: true
+AddCopierCI: true
+AddDocs: true
+AddDocsCI: true
+AddFormatterAndLinterConfigFiles: true
+AddGitHubPRTemplate: true
+AddGitHubTemplates: true
+AddLintCI: true
+AddLychee: true
+AddMacToCI: true
+AddPrecommit: true
+AddPrecommitUpdateCI: true
+AddTagBotCI: true
+AddTestCI: true
+AddWinToCI: false
+Authors: H. Alejandro Merchan <hector.merchan@gmail.com>
+CheckExplicitImports: true
+CodeOfConductContact: hector.merchan@gmail.com
+ConfigIndentation: 2
+ExplicitImportsChecklist: exclude_all_qualified_accesses_are_public
+GitHubActionVersionAutoUpdate: dependabot
+JuliaCompatAutoUpdate: dependabot
+JuliaIndentation: 4
+JuliaMinCIVersion: lts
+JuliaMinVersion: '1.10'
+License: MIT
+LicenseCopyrightHolders: H. Alejandro Merchan
+MarkdownIndentation: 2
+PackageName: ImageTally
+PackageOwner: H. Alejandro Merchan
+PackageUUID: 3a0688b7-cdea-55d2-b485-88f3d59bc26e
+RunJuliaNightlyOnCI: true
+StrategyConfirmIncluded: true
+StrategyLevel: 2
+StrategyReviewExcluded: false
+TestingStrategy: basic
+UseCirrusCI: false
+_src_path: /home/alejandromerchan/.julia/packages/BestieTemplate/fOzc4

@@ -1,0 +1,10 @@
+[deps]
+Documenter = "e30172f5-a6a5-5a46-863b-614d45cd2de4"
+LiveServer = "16fef848-5104-11e9-1b77-fb7a48bbb589"
+ImageTally = "3a0688b7-cdea-55d2-b485-88f3d59bc26e"
+
+[compat]
+Documenter = "1"
+
+[sources]
+ImageTally = {path = ".."}
