@@ -15,17 +15,16 @@
 
         # Custom tags
         tags = [Tag("male", :blue, :circle), Tag("female", :red, :utriangle)]
-        session2 = new_session("test.jpg", 3456, 5184; tags=tags)
+        session2 = new_session("test.jpg", 3456, 5184; tags = tags)
         @test length(session2.tags) == 2
         @test session2.active_tag == "male"
 
         # Empty tags throws
-        @test_throws ArgumentError new_session("test.jpg", 3456, 5184; tags=Tag[])
+        @test_throws ArgumentError new_session("test.jpg", 3456, 5184; tags = Tag[])
     end
 
     @testset "add_point!" begin
-        session = new_session("test.jpg", 3456, 5184;
-            tags=[Tag("male", :blue, :circle)])
+        session = new_session("test.jpg", 3456, 5184; tags = [Tag("male", :blue, :circle)])
 
         point = add_point!(session, 1728.0, 2592.0)
 
@@ -90,7 +89,7 @@
         @test nearest2.id == 2
 
         # Nothing within threshold
-        @test isnothing(find_nearest_point(session, 3000.0, 100.0; threshold=50.0))
+        @test isnothing(find_nearest_point(session, 3000.0, 100.0; threshold = 50.0))
 
         # Empty session returns nothing
         empty_session = new_session("test.jpg", 3456, 5184)
@@ -99,7 +98,7 @@
 
     @testset "count_by_tag" begin
         tags = [Tag("male", :blue, :circle), Tag("female", :red, :utriangle)]
-        session = new_session("test.jpg", 3456, 5184; tags=tags)
+        session = new_session("test.jpg", 3456, 5184; tags = tags)
 
         # Empty session
         counts = count_by_tag(session)
@@ -119,7 +118,7 @@
 
     @testset "set_active_tag!" begin
         tags = [Tag("male", :blue, :circle), Tag("female", :red, :utriangle)]
-        session = new_session("test.jpg", 3456, 5184; tags=tags)
+        session = new_session("test.jpg", 3456, 5184; tags = tags)
 
         set_active_tag!(session, "female")
         @test session.active_tag == "female"

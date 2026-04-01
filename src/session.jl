@@ -6,9 +6,7 @@ using Dates
 Return a default set of two tags to use when no tags are specified.
 """
 function default_tags()
-    return [
-        Tag("object", :red, :circle)
-    ]
+    return [Tag("object", :red, :circle)]
 end
 
 """
@@ -22,8 +20,12 @@ session = new_session("moths.jpg", 3456, 5184)
 session = new_session("moths.jpg", 3456, 5184; tags=[Tag("male", :blue, :circle), Tag("female", :red, :utriangle)])
 ```
 """
-function new_session(image_path::String, width::Int, height::Int;
-                     tags::Vector{Tag}=default_tags())
+function new_session(
+    image_path::String,
+    width::Int,
+    height::Int;
+    tags::Vector{Tag} = default_tags(),
+)
     isempty(tags) && throw(ArgumentError("Session must have at least one tag"))
     return CountSession(
         image_path,
@@ -33,7 +35,7 @@ function new_session(image_path::String, width::Int, height::Int;
         CountPoint[],
         1,
         tags[1].name,
-        12.0
+        12.0,
     )
 end
 
@@ -51,13 +53,8 @@ add_point!(session, 1728.0, 2592.0)
 function add_point!(session::CountSession, x_px::Float64, y_px::Float64)
     x_rel, y_rel = pixel_to_relative(x_px, y_px, session.image_width, session.image_height)
     x_rel, y_rel = clamp_to_image(x_rel, y_rel)
-    point = CountPoint(
-        session.next_id,
-        x_rel,
-        y_rel,
-        session.active_tag,
-        string(Dates.now())
-    )
+    point =
+        CountPoint(session.next_id, x_rel, y_rel, session.active_tag, string(Dates.now()))
     push!(session.points, point)
     session.next_id += 1
     return point
@@ -113,16 +110,20 @@ Returns nothing if no point is within the threshold.
 point = find_nearest_point(session, 1728.0, 2592.0)
 ```
 """
-function find_nearest_point(session::CountSession, x_px::Float64, y_px::Float64;
-                             threshold::Float64=50.0)
+function find_nearest_point(
+    session::CountSession,
+    x_px::Float64,
+    y_px::Float64;
+    threshold::Float64 = 50.0,
+)
     isempty(session.points) && return nothing
 
     nearest = nothing
     min_dist = Inf
 
     for point in session.points
-        px, py = relative_to_pixel(point.x, point.y,
-                                   session.image_width, session.image_height)
+        px, py =
+            relative_to_pixel(point.x, point.y, session.image_width, session.image_height)
         dist = sqrt((px - x_px)^2 + (py - y_px)^2)
         if dist < min_dist
             min_dist = dist

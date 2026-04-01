@@ -3,5 +3,5 @@ using ImageTally
 
 @testset "ImageTally.jl" begin
     include("test_coordinates.jl")
-    include("test_session.jl")    
+    include("test_session.jl")
 end
