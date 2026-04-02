@@ -1,4 +1,4 @@
-using Dates
+using Dates: Dates, DateTime
 
 # Constants
 const DEFAULT_MARKER_SIZE = 12.0
@@ -59,8 +59,7 @@ add_point!(session, 1728.0, 2592.0)
 function add_point!(session::CountSession, x_px::Float64, y_px::Float64)
     x_rel, y_rel = pixel_to_relative(x_px, y_px, session.image_width, session.image_height)
     x_rel, y_rel = clamp_to_image(x_rel, y_rel)
-    point =
-        CountPoint(session.next_id, x_rel, y_rel, session.active_tag, Dates.now())
+    point = CountPoint(session.next_id, x_rel, y_rel, session.active_tag, Dates.now())
     push!(session.points, point)
     session.next_id += 1
     return point
