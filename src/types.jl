@@ -1,4 +1,4 @@
-using Dates
+using Dates: Dates, DateTime
 
 """
     Tag
@@ -33,7 +33,7 @@ struct CountPoint
     x::Float64
     y::Float64
     tag::String
-    timestamp::DateTime 
+    timestamp::DateTime
 end
 
 """

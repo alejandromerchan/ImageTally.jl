@@ -29,7 +29,7 @@
         @test_throws ArgumentError new_session("test.jpg", 3456, 5184; tags = Tag[])
 
         # Too many tags throws
-        too_many = [Tag("tag$i", :blue, :circle) for i in 1:(MAX_TAGS + 1)]
+        too_many = [Tag("tag$i", :blue, :circle) for i = 1:(MAX_TAGS+1)]
         @test_throws ArgumentError new_session("test.jpg", 3456, 5184; tags = too_many)
     end
 
@@ -212,7 +212,7 @@
         @test_throws ArgumentError add_tag!(session, Tag("juvenile", :blue, :circle))
 
         # Fill up to MAX_TAGS
-        for i in 2:(MAX_TAGS - 1)
+        for i = 2:(MAX_TAGS-1)
             add_tag!(session, Tag("tag$i", :blue, :circle))
         end
         @test length(session.tags) == MAX_TAGS
@@ -238,10 +238,12 @@
         @test_throws ArgumentError remove_tag!(session, "male")
 
         # Active tag switches when removed
-        session2 = new_session("test.jpg", 3456, 5184; tags = [
-            Tag("male", :blue, :circle),
-            Tag("female", :red, :utriangle),
-        ])
+        session2 = new_session(
+            "test.jpg",
+            3456,
+            5184;
+            tags = [Tag("male", :blue, :circle), Tag("female", :red, :utriangle)],
+        )
         set_active_tag!(session2, "male")
         remove_tag!(session2, "male")
         @test session2.active_tag == "female"
