@@ -1,4 +1,5 @@
 using Test
+using Dates
 using ImageTally
 
 @testset "ImageTally.jl" begin

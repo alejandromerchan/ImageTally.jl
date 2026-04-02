@@ -2,6 +2,11 @@
 
 @testset "Session management" begin
 
+    @testset "Constants" begin
+        @test DEFAULT_MARKER_SIZE == 12.0
+        @test MAX_TAGS == 10
+    end
+
     @testset "new_session" begin
         session = new_session("test.jpg", 3456, 5184)
 
@@ -12,6 +17,7 @@
         @test session.active_tag == session.tags[1].name
         @test isempty(session.points)
         @test session.next_id == 1
+        @test session.marker_size == DEFAULT_MARKER_SIZE
 
         # Custom tags
         tags = [Tag("male", :blue, :circle), Tag("female", :red, :utriangle)]
@@ -21,6 +27,10 @@
 
         # Empty tags throws
         @test_throws ArgumentError new_session("test.jpg", 3456, 5184; tags = Tag[])
+
+        # Too many tags throws
+        too_many = [Tag("tag$i", :blue, :circle) for i in 1:(MAX_TAGS + 1)]
+        @test_throws ArgumentError new_session("test.jpg", 3456, 5184; tags = too_many)
     end
 
     @testset "add_point!" begin
@@ -32,6 +42,7 @@
         @test point.x ≈ 0.5
         @test point.y ≈ 0.5
         @test point.tag == "male"
+        @test point.timestamp isa Dates.DateTime
         @test length(session.points) == 1
         @test session.next_id == 2
 
@@ -60,6 +71,8 @@
         session = new_session("test.jpg", 3456, 5184)
         add_point!(session, 1728.0, 2592.0)
 
+        original_timestamp = session.points[1].timestamp
+
         # Move existing point
         @test move_point!(session, 1, 1800.0, 2600.0) == true
         @test session.points[1].x ≈ 1800.0 / 3456
@@ -68,6 +81,9 @@
         # Tag and id preserved after move
         @test session.points[1].id == 1
         @test session.points[1].tag == session.active_tag
+
+        # Timestamp preserved after move
+        @test session.points[1].timestamp == original_timestamp
 
         # Move non-existing point
         @test move_point!(session, 99, 1000.0, 1000.0) == false
@@ -88,7 +104,7 @@
         @test !isnothing(nearest2)
         @test nearest2.id == 2
 
-        # Nothing within threshold
+        # Nothing within threshold — click far from all points
         @test isnothing(find_nearest_point(session, 3000.0, 100.0; threshold = 50.0))
 
         # Empty session returns nothing
@@ -100,7 +116,7 @@
         tags = [Tag("male", :blue, :circle), Tag("female", :red, :utriangle)]
         session = new_session("test.jpg", 3456, 5184; tags = tags)
 
-        # Empty session
+        # Empty session — all tags present with zero count
         counts = count_by_tag(session)
         @test counts["male"] == 0
         @test counts["female"] == 0
@@ -116,6 +132,21 @@
         @test counts["female"] == 1
     end
 
+    @testset "total_count" begin
+        session = new_session("test.jpg", 3456, 5184)
+
+        @test total_count(session) == 0
+
+        add_point!(session, 1728.0, 2592.0)
+        @test total_count(session) == 1
+
+        add_point!(session, 1000.0, 1000.0)
+        @test total_count(session) == 2
+
+        delete_point!(session, 1)
+        @test total_count(session) == 1
+    end
+
     @testset "set_active_tag!" begin
         tags = [Tag("male", :blue, :circle), Tag("female", :red, :utriangle)]
         session = new_session("test.jpg", 3456, 5184; tags = tags)
@@ -128,6 +159,92 @@
 
         # Invalid tag throws
         @test_throws ArgumentError set_active_tag!(session, "unknown")
+    end
+
+    @testset "set_marker_size!" begin
+        session = new_session("test.jpg", 3456, 5184)
+
+        set_marker_size!(session, 20.0)
+        @test session.marker_size == 20.0
+
+        set_marker_size!(session, 1.0)
+        @test session.marker_size == 1.0
+
+        # Zero throws
+        @test_throws ArgumentError set_marker_size!(session, 0.0)
+
+        # Negative throws
+        @test_throws ArgumentError set_marker_size!(session, -1.0)
+    end
+
+    @testset "get_tag" begin
+        tags = [Tag("male", :blue, :circle), Tag("female", :red, :utriangle)]
+        session = new_session("test.jpg", 3456, 5184; tags = tags)
+
+        tag = get_tag(session, "male")
+        @test !isnothing(tag)
+        @test tag.name == "male"
+        @test tag.color == :blue
+        @test tag.marker == :circle
+
+        @test isnothing(get_tag(session, "unknown"))
+    end
+
+    @testset "has_tag" begin
+        tags = [Tag("male", :blue, :circle), Tag("female", :red, :utriangle)]
+        session = new_session("test.jpg", 3456, 5184; tags = tags)
+
+        @test has_tag(session, "male") == true
+        @test has_tag(session, "female") == true
+        @test has_tag(session, "unknown") == false
+    end
+
+    @testset "add_tag!" begin
+        session = new_session("test.jpg", 3456, 5184)
+
+        # Add a new tag
+        tag = add_tag!(session, Tag("juvenile", :green, :diamond))
+        @test tag.name == "juvenile"
+        @test has_tag(session, "juvenile")
+        @test length(session.tags) == 2
+
+        # Duplicate tag throws
+        @test_throws ArgumentError add_tag!(session, Tag("juvenile", :blue, :circle))
+
+        # Fill up to MAX_TAGS
+        for i in 2:(MAX_TAGS - 1)
+            add_tag!(session, Tag("tag$i", :blue, :circle))
+        end
+        @test length(session.tags) == MAX_TAGS
+
+        # Exceeding MAX_TAGS throws
+        @test_throws ArgumentError add_tag!(session, Tag("toomany", :red, :circle))
+    end
+
+    @testset "remove_tag!" begin
+        tags = [Tag("male", :blue, :circle), Tag("female", :red, :utriangle)]
+        session = new_session("test.jpg", 3456, 5184; tags = tags)
+
+        # Remove tag with no points
+        @test remove_tag!(session, "female") == true
+        @test !has_tag(session, "female")
+        @test length(session.tags) == 1
+
+        # Remove non-existing tag
+        @test remove_tag!(session, "unknown") == false
+
+        # Add points and try to remove their tag
+        add_point!(session, 1728.0, 2592.0)
+        @test_throws ArgumentError remove_tag!(session, "male")
+
+        # Active tag switches when removed
+        session2 = new_session("test.jpg", 3456, 5184; tags = [
+            Tag("male", :blue, :circle),
+            Tag("female", :red, :utriangle),
+        ])
+        set_active_tag!(session2, "male")
+        remove_tag!(session2, "male")
+        @test session2.active_tag == "female"
     end
 
 end

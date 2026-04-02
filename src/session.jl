@@ -1,5 +1,9 @@
 using Dates
 
+# Constants
+const DEFAULT_MARKER_SIZE = 12.0
+const MAX_TAGS = 10
+
 """
     default_tags() -> Vector{Tag}
 
@@ -27,6 +31,8 @@ function new_session(
     tags::Vector{Tag} = default_tags(),
 )
     isempty(tags) && throw(ArgumentError("Session must have at least one tag"))
+    length(tags) > MAX_TAGS &&
+        throw(ArgumentError("Maximum of $MAX_TAGS tags allowed, got $(length(tags))"))
     return CountSession(
         image_path,
         width,
@@ -35,7 +41,7 @@ function new_session(
         CountPoint[],
         1,
         tags[1].name,
-        12.0,
+        DEFAULT_MARKER_SIZE,
     )
 end
 
@@ -54,7 +60,7 @@ function add_point!(session::CountSession, x_px::Float64, y_px::Float64)
     x_rel, y_rel = pixel_to_relative(x_px, y_px, session.image_width, session.image_height)
     x_rel, y_rel = clamp_to_image(x_rel, y_rel)
     point =
-        CountPoint(session.next_id, x_rel, y_rel, session.active_tag, string(Dates.now()))
+        CountPoint(session.next_id, x_rel, y_rel, session.active_tag, Dates.now())
     push!(session.points, point)
     session.next_id += 1
     return point
@@ -118,20 +124,22 @@ function find_nearest_point(
 )
     isempty(session.points) && return nothing
 
+    # Work in relative space so threshold scales with image size
+    x_rel, y_rel = pixel_to_relative(x_px, y_px, session.image_width, session.image_height)
+    threshold_rel = threshold / max(session.image_width, session.image_height)
+
     nearest = nothing
     min_dist = Inf
 
     for point in session.points
-        px, py =
-            relative_to_pixel(point.x, point.y, session.image_width, session.image_height)
-        dist = sqrt((px - x_px)^2 + (py - y_px)^2)
+        dist = sqrt((point.x - x_rel)^2 + (point.y - y_rel)^2)
         if dist < min_dist
             min_dist = dist
             nearest = point
         end
     end
 
-    return min_dist <= threshold ? nearest : nothing
+    return min_dist <= threshold_rel ? nearest : nothing
 end
 
 """
@@ -153,6 +161,20 @@ function count_by_tag(session::CountSession)
 end
 
 """
+    total_count(session) -> Int
+
+Return the total number of counted points across all tags.
+
+# Examples
+```julia
+total_count(session)  # 8
+```
+"""
+function total_count(session::CountSession)
+    return length(session.points)
+end
+
+"""
     set_active_tag!(session, tag_name) -> Nothing
 
 Set the active tag by name. Throws ArgumentError if tag doesn't exist.
@@ -167,4 +189,98 @@ function set_active_tag!(session::CountSession, tag_name::String)
         throw(ArgumentError("Tag \"$tag_name\" not found in session tags"))
     session.active_tag = tag_name
     return nothing
+end
+
+"""
+    set_marker_size!(session, size) -> Nothing
+
+Set the global marker display size. Must be positive.
+
+# Examples
+```julia
+set_marker_size!(session, 20.0)
+```
+"""
+function set_marker_size!(session::CountSession, size::Float64)
+    size > 0 || throw(ArgumentError("Marker size must be positive, got $size"))
+    session.marker_size = size
+    return nothing
+end
+
+"""
+    get_tag(session, tag_name) -> Union{Tag, Nothing}
+
+Return the Tag with the given name, or nothing if it doesn't exist.
+
+# Examples
+```julia
+tag = get_tag(session, "male")
+```
+"""
+function get_tag(session::CountSession, tag_name::String)
+    idx = findfirst(t -> t.name == tag_name, session.tags)
+    isnothing(idx) && return nothing
+    return session.tags[idx]
+end
+
+"""
+    has_tag(session, tag_name) -> Bool
+
+Return true if a tag with the given name exists in the session.
+
+# Examples
+```julia
+has_tag(session, "male")  # true or false
+```
+"""
+function has_tag(session::CountSession, tag_name::String)
+    return any(t -> t.name == tag_name, session.tags)
+end
+
+"""
+    add_tag!(session, tag) -> Tag
+
+Add a new tag to the session. Throws ArgumentError if a tag with the
+same name already exists or if the maximum number of tags is reached.
+
+# Examples
+```julia
+add_tag!(session, Tag("juvenile", :green, :diamond))
+```
+"""
+function add_tag!(session::CountSession, tag::Tag)
+    has_tag(session, tag.name) &&
+        throw(ArgumentError("Tag \"$(tag.name)\" already exists in this session"))
+    length(session.tags) >= MAX_TAGS &&
+        throw(ArgumentError("Maximum of $MAX_TAGS tags allowed"))
+    push!(session.tags, tag)
+    return tag
+end
+
+"""
+    remove_tag!(session, tag_name) -> Bool
+
+Remove the tag with the given name. Returns false if the tag doesn't exist.
+Throws ArgumentError if points exist with this tag — delete or retag those
+points first. Automatically switches active tag if the removed tag was active.
+
+# Examples
+```julia
+remove_tag!(session, "juvenile")
+```
+"""
+function remove_tag!(session::CountSession, tag_name::String)
+    has_tag(session, tag_name) || return false
+    any(p -> p.tag == tag_name, session.points) && throw(
+        ArgumentError(
+            "Cannot remove tag \"$tag_name\" — $(count(p -> p.tag == tag_name, session.points)) point(s) exist with this tag. Delete or retag them first.",
+        ),
+    )
+    idx = findfirst(t -> t.name == tag_name, session.tags)
+    deleteat!(session.tags, idx)
+    # If we removed the active tag, switch to the first remaining tag
+    if session.active_tag == tag_name
+        session.active_tag = session.tags[1].name
+    end
+    return true
 end
