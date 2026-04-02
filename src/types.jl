@@ -1,3 +1,5 @@
+using Dates
+
 """
     Tag
 
@@ -24,14 +26,14 @@ Represents a single counted object in the image.
 - `x::Float64`: Relative x position (0.0 to 1.0)
 - `y::Float64`: Relative y position (0.0 to 1.0)
 - `tag::String`: Name of the associated Tag
-- `timestamp::String`: ISO timestamp when point was created
+- `timestamp::DateTime
 """
 struct CountPoint
     id::Int
     x::Float64
     y::Float64
     tag::String
-    timestamp::String
+    timestamp::DateTime 
 end
 
 """
