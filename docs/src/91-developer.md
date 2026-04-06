@@ -165,7 +165,7 @@ After that, you only need to wait and verify:
 - Wait for the bot to comment (should take < 1m) with a link to a PR to the registry
 - Follow the link and wait for a comment on the auto-merge
 - The comment should said all is well and auto-merge should occur shortly
-- After the merge happens, TagBot will trigger and create a new GitHub tag. Check on <<https://github.com/H>. Alejandro Merchan/ImageTally.jl/releases>
+- After the merge happens, TagBot will trigger and create a new GitHub tag. Check on <<https://github.com/alejandromerchan/ImageTally.jl/releases>
 - After the release is create, a "docs" GitHub action will start for the tag.
 - After it passes, a deploy action will run.
-- After that runs, the [stable docs](<https://H>. Alejandro Merchan.github.io/ImageTally.jl/stable) should be updated. Check them and look for the version number.
+- After that runs, the [stable docs](<<https://alejandromerchan.github.io/ImageTally.jl/stable>) should be updated. Check them and look for the version number.
