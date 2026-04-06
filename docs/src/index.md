@@ -4,7 +4,7 @@ CurrentModule = ImageTally
 
 # ImageTally
 
-Documentation for [ImageTally](<<https://github.com/alejandromerchan/ImageTally.jl>).
+Documentation for [ImageTally](https://github.com/alejandromerchan/ImageTally.jl>).
 
 ## Contributors
 
