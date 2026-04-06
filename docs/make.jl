@@ -61,12 +61,12 @@ end
 makedocs(;
     modules = [ImageTally],
     authors = "H. Alejandro Merchan <hector.merchan@gmail.com>",
-    repo = "https://github.com/H. Alejandro Merchan/ImageTally.jl/blob/{commit}{path}#{line}",
+    repo = "https://github.com/alejandromerchan/ImageTally.jl/blob/{commit}{path}#{line}",
     sitename = "ImageTally.jl",
     format = Documenter.HTML(;
-        canonical = "https://H. Alejandro Merchan.github.io/ImageTally.jl",
+        canonical = "https://alejandromerchan.github.io/ImageTally.jl",
     ),
     pages = list_pages(),
 )
 
-deploydocs(; repo = "github.com/H. Alejandro Merchan/ImageTally.jl")
+deploydocs(; repo = "github.com/alejandromerchan/ImageTally.jl")
