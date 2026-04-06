@@ -30,8 +30,7 @@ jobs:
         os:
           - ubuntu-latest
           - macOS-latest
-          
-          
+
         arch:
           - x64
         allow_failure: [false]
@@ -44,4 +43,3 @@ jobs:
             os: macOS-latest
             arch: x64
             allow_failure: true
-          
