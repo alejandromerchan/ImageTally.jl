@@ -8,11 +8,18 @@ projects = ["test", "docs"]
 
 [deps]
 Dates = "ade2ca70-3891-5945-98fb-dc099432e06a"
-FileIO = "5789e2e9-d7fb-5bc7-8068-2c6fae9b9549"
 TOML = "fa267f1f-6049-4f14-aa54-33bafae1ed76"
+
+[weakdeps]
+FileIO = "5789e2e9-d7fb-5bc7-8068-2c6fae9b9549"
+GLMakie = "e9467ef8-e4e7-5192-8a1a-b1aee30e663a"
+
+[extensions]
+GLMakieExt = ["GLMakie", "FileIO"]
 
 [compat]
 Dates = "1"
 FileIO = "1"
+GLMakie = "0.10, 0.11, 0.12, 0.13"
 TOML = "1.0.3"
 julia = "1.10"
