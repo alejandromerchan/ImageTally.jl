@@ -69,19 +69,36 @@ end
 
 function _launch_gui(sess::CountSession, img)
     n_tags = length(sess.tags)
+    h = sess.image_height
+    w = sess.image_width
 
     # ── Figure & layout ──────────────────────────────────────────────────
-    fig = Figure(size = (1400, 900))
-    colsize!(fig.layout, 1, Relative(0.75))
+    aspect_ratio = w / h
+    panel_width = 280
+    canvas_height = 800
+    canvas_width = round(Int, canvas_height * aspect_ratio)
+    fig_width = canvas_width + panel_width
+    # figure_padding=0 ensures the layout area equals the figure size exactly,
+    # so canvas_width = canvas_height * (w/h) is accurate with no padding offset.
+    fig = Figure(size = (fig_width, canvas_height), figure_padding = 0)
 
     # ── Image axis ───────────────────────────────────────────────────────
-    # yreversed so row 1 of the matrix is displayed at the top (image convention).
-    # image!(ax, img) maps first matrix dim → y-axis, second dim → x-axis,
-    # so mouseposition(ax) returns (col, row) ≈ (x_pixel, y_pixel).
-    ax = Axis(fig[1, 1]; aspect = DataAspect(), yreversed = true)
+    # Flip image rows so the top row displays at the top without yreversed=true.
+    # yreversed=true causes is_mouseinside to misreport the axis boundary in
+    # GLMakie, so we keep a standard (y-up) axis and compensate in coordinates.
+    img_display = reverse(img, dims = 1)
+    # DataAspect enforces the data-unit aspect ratio regardless of axis pixel size,
+    # preventing squishing when canvas proportions are slightly off.
+    ax = Axis(fig[1, 1]; aspect = DataAspect())
     hidespines!(ax)
     hidedecorations!(ax)
-    image!(ax, img)
+    # image!(ax, M) maps first dim of M → x-axis, second dim → y-axis.
+    # img_display is (h, w), so without transposing, x gets h samples and y gets w —
+    # the image is transposed in axis space and limits based on (w, h) cut off the top.
+    # PermutedDimsArray transposes lazily (no copy) so first dim becomes w (columns → x)
+    # and second becomes h (rows → y), giving x ∈ [0.5, w+0.5], y ∈ [0.5, h+0.5].
+    image!(ax, PermutedDimsArray(img_display, (2, 1)))
+    ax.limits[] = (0.5, Float64(w) + 0.5, 0.5, Float64(h) + 0.5)
 
     # Deregister built-in left-click/drag interactions so they don't
     # interfere with add-point (click) and move-point (drag).
@@ -89,29 +106,36 @@ function _launch_gui(sess::CountSession, img)
     for name in (:rectanglezoom, :dragpan)
         try
             deregister_interaction!(ax, name)
-        catch
+        catch e
+            @warn "Could not deregister interaction $name" exception = e
         end
     end
 
     # ── Control panel ────────────────────────────────────────────────────
+    # Column 1 is fixed; column 2 fills the remainder (= panel_width) implicitly.
+    # colsize! on column 2 would error here because no content has been placed
+    # in it yet — GridLayoutBase only registers a column when content is added.
     panel = fig[1, 2]
+    colsize!(fig.layout, 1, Fixed(canvas_width))
 
     # ── Observables ──────────────────────────────────────────────────────
     tag_pts_obs = [Observable(Point2f[]) for _ = 1:n_tags]
-    marker_sz_obs = Observable(sess.marker_size)
     count_obs = [Observable(0) for _ = 1:n_tags]
     total_obs = Observable(0)
     active_tag_obs = Observable(sess.active_tag)
     status_obs = Observable(" ")
 
     # ── Scatter plot per tag ─────────────────────────────────────────────
-    for (i, tag) in enumerate(sess.tags)
+    # markersize is set as a plain value and updated via plot.markersize[],
+    # not via a bound Observable — reactive markersize breaks hit detection
+    # after the slider is moved.
+    scatter_plots = map(enumerate(sess.tags)) do (i, tag)
         scatter!(
             ax,
             tag_pts_obs[i];
             color = tag.color,
             marker = tag.marker,
-            markersize = marker_sz_obs,
+            markersize = sess.marker_size,
             strokecolor = :black,
             strokewidth = 0.5,
         )
@@ -119,17 +143,22 @@ function _launch_gui(sess::CountSession, img)
 
     # ── Display helpers ──────────────────────────────────────────────────
 
-    # Relative coords → axis pixel-space Point2f (matches 1-based image cols/rows).
-    rel_to_ax(p::CountPoint) = Point2f(p.x * sess.image_width, p.y * sess.image_height)
+    # Convert stored relative coords to display axis coordinates.
+    # image!(ax, M) with implicit extents places pixel centers at x ∈ 1..w, y ∈ 1..h.
+    # With flipped image (no yreversed): axis y increases upward, so original row r
+    # appears at y = h + 1 - r. For relative coords: axis_y = (1 - p.y) * h + 1.
+    rel_to_ax(p::CountPoint) =
+        Point2f(p.x * Float64(w) + 0.5, (1.0 - p.y) * Float64(h) + 0.5)
 
     function refresh_display!()
         counts = count_by_tag(sess)
+        msize = sess.marker_size
         for (i, tag) in enumerate(sess.tags)
             tag_pts_obs[i][] = [rel_to_ax(p) for p in sess.points if p.tag == tag.name]
             count_obs[i][] = counts[tag.name]
+            scatter_plots[i].markersize[] = msize
         end
         total_obs[] = total_count(sess)
-        marker_sz_obs[] = sess.marker_size
         active_tag_obs[] = sess.active_tag
     end
 
@@ -198,7 +227,9 @@ function _launch_gui(sess::CountSession, img)
     row += 1
     on(size_slider.value) do v
         set_marker_size!(sess, Float64(v))
-        marker_sz_obs[] = sess.marker_size
+        for sp in scatter_plots
+            sp.markersize[] = sess.marker_size
+        end
     end
 
     # ── Count display ────────────────────────────────────────────────────
@@ -257,14 +288,21 @@ function _launch_gui(sess::CountSession, img)
         if isfile(p)
             try
                 loaded = load_session(p)
-                sess.points = loaded.points
-                sess.next_id = loaded.next_id
-                sess.active_tag = loaded.active_tag
-                sess.marker_size = loaded.marker_size
-                size_slider.value[] =
-                    clamp(round(Int, sess.marker_size), first(sl_range), last(sl_range))
-                refresh_display!()
-                status_obs[] = "Loaded: $(basename(p))"
+                if length(loaded.tags) != length(sess.tags)
+                    status_obs[] =
+                        "Cannot load: tag count differs " *
+                        "(session has $(length(loaded.tags)), current has $(length(sess.tags)))"
+                else
+                    sess.points = loaded.points
+                    sess.next_id = loaded.next_id
+                    sess.active_tag = loaded.active_tag
+                    sess.marker_size = loaded.marker_size
+                    sess.tags = loaded.tags
+                    size_slider.value[] =
+                        clamp(round(Int, sess.marker_size), first(sl_range), last(sl_range))
+                    refresh_display!()
+                    status_obs[] = "Loaded: $(basename(p))"
+                end
             catch e
                 status_obs[] = "Load error: $e"
             end
@@ -295,11 +333,12 @@ function _launch_gui(sess::CountSession, img)
             return Consume(false)
         end
 
-        # mouseposition(ax) returns coordinates in axis data space,
-        # which matches image pixel coords (col ≈ x, row ≈ y).
+        # mouseposition(ax) returns axis data-space coords.
+        # With flipped image (no yreversed): axis y increases upward,
+        # so pixel row = (h+1) - axis_y.
         pos = mouseposition(ax)
         x_px = Float64(pos[1])
-        y_px = Float64(pos[2])
+        y_px = Float64(h) + 1.0 - Float64(pos[2])
 
         if event.button == Mouse.left
 
@@ -345,7 +384,7 @@ function _launch_gui(sess::CountSession, img)
         end
         pos = mouseposition(ax)
         x_px = Float64(pos[1])
-        y_px = Float64(pos[2])
+        y_px = Float64(h) + 1.0 - Float64(pos[2])
         move_point!(sess, drag_id[], x_px, y_px)
         if !isnothing(drag_tag_name[])
             refresh_tag!(drag_tag_name[])
