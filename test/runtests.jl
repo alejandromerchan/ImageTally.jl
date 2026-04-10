@@ -6,4 +6,5 @@ using ImageTally
     include("test_coordinates.jl")
     include("test_session.jl")
     include("test_io.jl")
+    include("test_extension.jl")
 end
