@@ -4,8 +4,10 @@ using GLMakie
 using FileIO
 import ImageTally
 using ImageTally:
+    Tag,
     CountSession,
     CountPoint,
+    default_tags,
     load_session,
     new_session,
     add_point!,
@@ -61,6 +63,56 @@ function ImageTally.launch_counter(
     end
 
     return _launch_gui(sess, img)
+end
+
+"""
+    ImageTally.launch_counter(sess::CountSession) -> (Figure, CountSession)
+
+Launch the ImageTally GUI for a pre-built `CountSession`. The image is loaded
+from `sess.image_path`.
+
+# Usage
+```julia
+using GLMakie, ImageTally
+sess = new_session("moths.jpg"; tags = [
+    Tag("egg", :red, :circle),
+    Tag("parasitized", :blue, :utriangle),
+])
+fig, sess = launch_counter(sess)
+```
+"""
+function ImageTally.launch_counter(sess::CountSession)
+    isfile(sess.image_path) ||
+        throw(ArgumentError("Image file not found: $(sess.image_path)"))
+    img = FileIO.load(sess.image_path)
+    return _launch_gui(sess, img)
+end
+
+"""
+    ImageTally.new_session(image_path; tags=default_tags()) -> CountSession
+
+Create a new counting session, reading image dimensions automatically from the file.
+
+# Arguments
+- `image_path::String`: Path to the image file.
+- `tags::Vector{Tag}`: Tags to use for counting. Defaults to `[Tag("object", :red, :circle)]`.
+
+# Usage
+```julia
+using GLMakie, ImageTally
+sess = new_session("moths.jpg")
+sess = new_session("moths.jpg"; tags = [
+    Tag("egg", :red, :circle),
+    Tag("parasitized", :blue, :utriangle),
+])
+fig, sess = launch_counter(sess)
+```
+"""
+function ImageTally.new_session(image_path::String; tags::Vector{Tag} = default_tags())
+    isfile(image_path) || throw(ArgumentError("Image file not found: $image_path"))
+    img = FileIO.load(image_path)
+    h, w = size(img)
+    return new_session(image_path, w, h; tags)
 end
 
 # -----------------------------------------------------------------------
