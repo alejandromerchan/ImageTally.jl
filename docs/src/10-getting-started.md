@@ -43,7 +43,8 @@ window stays interactive for as long as the Julia session is running.
 | Left-drag on an existing marker | Move that marker |
 | Right-click on an existing marker | Delete that marker |
 | Scroll wheel | Zoom in / out |
-| `R` key | Reset the view |
+| `- Zoom Out` / `Zoom In +` buttons | Zoom out / in (1.5× per click) |
+| `R` key or `Reset View` button | Restore the full-image view |
 
 ### Control panel
 
@@ -51,6 +52,7 @@ The panel on the right side of the window provides:
 
 - **Active tag indicator** — shows which tag will be used for new markers.
 - **Tag buttons** — click a tag's button to make it the active tag.
+- **Zoom buttons** — `- Zoom Out`, `Reset View`, and `Zoom In +` buttons for explicit zoom control (each step is 1.5×). The scroll wheel and `R` key also work.
 - **Marker size slider** — adjust the display size of all markers (5–40 px).
 - **Counts display** — live per-tag and total counts.
 - **Save session** — writes a `.toml` file next to the image (e.g. `image_session.toml`).

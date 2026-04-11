@@ -17,7 +17,7 @@ Typical use cases include counting insects on traps, cells in microscopy images,
 
 ## Features
 
-- **Interactive GUI** — left-click to place markers, right-click to delete, left-drag to move. Scroll to zoom; press `R` to reset the view.
+- **Interactive GUI** — left-click to place markers, right-click to delete, left-drag to move. Scroll or use the zoom buttons to zoom in/out; press `R` or click **Reset View** to restore the full image.
 - **Multiple tags** — define up to 10 named categories (e.g., `"male"`, `"female"`, `"egg"`), each with its own color and marker shape.
 - **Session persistence** — save and reload counting sessions as TOML files so work can be interrupted and resumed.
 - **CSV export** — export all counted points with both relative (0–1) and pixel coordinates, plus timestamps.
@@ -53,15 +53,16 @@ fig, sess = launch_counter("path/to/image.jpg")
 fig, sess = launch_counter("path/to/image.jpg"; session="image_session.toml")
 ```
 
-**Mouse controls:**
+**Controls:**
 
 | Action | Result |
 | ------ | ------ |
 | Left-click (empty area) | Add point with active tag |
 | Left-drag (on a point) | Move that point |
 | Right-click (on a point) | Delete that point |
-| Scroll | Zoom in / out |
-| `R` key | Reset view |
+| Scroll wheel | Zoom in / out |
+| `- Zoom Out` / `Zoom In +` buttons | Zoom out / in (1.5× per click) |
+| `R` key or `Reset View` button | Restore full-image view |
 
 Use the control panel on the right to switch the active tag, adjust marker size, and save/load/export.
 

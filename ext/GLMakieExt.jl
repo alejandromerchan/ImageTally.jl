@@ -116,6 +116,51 @@ function ImageTally.new_session(image_path::String; tags::Vector{Tag} = default_
 end
 
 # -----------------------------------------------------------------------
+# Zoom limit helpers (pure functions — no Makie dependency, testable)
+# -----------------------------------------------------------------------
+
+"""
+    _zoom_in_limits(xmin, xmax, ymin, ymax, factor=1.5)
+
+Return `(xmin, xmax, ymin, ymax)` for a zoom-in step of `factor` centered on
+the current view. Both axes shrink by `factor`.
+"""
+function _zoom_in_limits(xmin::Real, xmax::Real, ymin::Real, ymax::Real, factor::Real = 1.5)
+    cx = (xmin + xmax) / 2
+    cy = (ymin + ymax) / 2
+    hw = (xmax - xmin) / (2 * factor)
+    hh = (ymax - ymin) / (2 * factor)
+    return (cx - hw, cx + hw, cy - hh, cy + hh)
+end
+
+"""
+    _zoom_out_limits(xmin, xmax, ymin, ymax, img_w, img_h, factor=1.5)
+
+Return `(xmin, xmax, ymin, ymax)` for a zoom-out step of `factor` centered on
+the current view, clamped to the image bounds `[0.5, img_w+0.5] × [0.5, img_h+0.5]`.
+"""
+function _zoom_out_limits(
+    xmin::Real,
+    xmax::Real,
+    ymin::Real,
+    ymax::Real,
+    img_w::Real,
+    img_h::Real,
+    factor::Real = 1.5,
+)
+    cx = (xmin + xmax) / 2
+    cy = (ymin + ymax) / 2
+    new_hw = (xmax - xmin) * factor / 2
+    new_hh = (ymax - ymin) * factor / 2
+    return (
+        max(0.5, cx - new_hw),
+        min(img_w + 0.5, cx + new_hw),
+        max(0.5, cy - new_hh),
+        min(img_h + 0.5, cy + new_hh),
+    )
+end
+
+# -----------------------------------------------------------------------
 # Internal GUI builder
 # -----------------------------------------------------------------------
 
@@ -224,35 +269,108 @@ function _launch_gui(sess::CountSession, img)
     refresh_display!()
 
     # ── Control panel layout ─────────────────────────────────────────────
+    # Wrap in a GridLayout with outer padding so content doesn't hug the edges.
+    panel_grid = GridLayout(panel; padding = (8, 8, 8, 8))
     row = 1
 
+    # Hint labels styled as small secondary text to visually separate
+    # instructions from interactive controls.
+    hint_color = RGBf(0.45, 0.45, 0.45)
     Label(
-        panel[row, 1],
+        panel_grid[row, 1],
         "Left-click: add  |  Right-click: delete  |  Left-drag: move";
         halign = :left,
         tellwidth = false,
+        fontsize = 11,
+        color = hint_color,
     )
     row += 1
     Label(
-        panel[row, 1],
-        "Scroll: zoom  |  R: reset view";
+        panel_grid[row, 1],
+        "Scroll: zoom in/out  |  R: reset view";
         halign = :left,
         tellwidth = false,
+        fontsize = 11,
+        color = hint_color,
     )
     row += 1
 
+    # ── Zoom buttons ─────────────────────────────────────────────────────
+    # Shared style for all non-tag buttons: slightly off-white background with
+    # a thin black border so they stand out from the panel background.
+    btn_style =
+        (buttoncolor = RGBf(0.86, 0.86, 0.86), strokecolor = :black, strokewidth = 1)
+
+    zoom_btn_grid = GridLayout(panel_grid[row, 1]; tellwidth = true)
+    colgap!(zoom_btn_grid, 5)
+    zoom_out_btn = Button(
+        zoom_btn_grid[1, 1];
+        btn_style...,
+        label = "-  Zoom Out",
+        tellwidth = true,
+        height = 32,
+    )
+    reset_view_btn = Button(
+        zoom_btn_grid[1, 2];
+        btn_style...,
+        label = "Reset View",
+        tellwidth = true,
+        height = 32,
+    )
+    zoom_in_btn = Button(
+        zoom_btn_grid[1, 3];
+        btn_style...,
+        label = "Zoom In  +",
+        tellwidth = true,
+        height = 32,
+    )
+    row += 1
+    row_after_zoom = row - 1  # section boundary: zoom controls → tag selector
+
+    on(zoom_in_btn.clicks) do _
+        fl = ax.finallimits[]
+        x0, y0 = fl.origin
+        dx, dy = fl.widths
+        ax.limits[] = _zoom_in_limits(x0, x0 + dx, y0, y0 + dy)
+    end
+
+    on(zoom_out_btn.clicks) do _
+        fl = ax.finallimits[]
+        x0, y0 = fl.origin
+        dx, dy = fl.widths
+        ax.limits[] = _zoom_out_limits(x0, x0 + dx, y0, y0 + dy, w, h)
+    end
+
+    on(reset_view_btn.clicks) do _
+        ax.limits[] = (0.5, Float64(w) + 0.5, 0.5, Float64(h) + 0.5)
+    end
+
+    # R key: reset view (explicit handler — the built-in limitreset interaction
+    # is unreliable across Makie versions and focus states).
+    on(events(fig).keyboardbutton) do event
+        if event.action in (Keyboard.press, Keyboard.repeat) && event.key == Keyboard.r
+            ax.limits[] = (0.5, Float64(w) + 0.5, 0.5, Float64(h) + 0.5)
+        end
+    end
+
     # Active tag indicator
     active_txt = @lift("Active tag: $($active_tag_obs)")
-    Label(panel[row, 1], active_txt; halign = :left, tellwidth = false)
+    Label(panel_grid[row, 1], active_txt; halign = :left, tellwidth = false)
     row += 1
 
     # ── Tag selector buttons ─────────────────────────────────────────────
-    Label(panel[row, 1], "Select tag:"; halign = :left, tellwidth = false)
+    Label(
+        panel_grid[row, 1],
+        "Select tag:";
+        halign = :left,
+        tellwidth = false,
+        font = :bold,
+    )
     row += 1
 
     for tag in sess.tags
         btn = Button(
-            panel[row, 1];
+            panel_grid[row, 1];
             label = tag.name,
             buttoncolor = tag.color,
             labelcolor = :white,
@@ -266,17 +384,27 @@ function _launch_gui(sess::CountSession, img)
         end
         row += 1
     end
+    row_after_tags = row - 1  # section boundary: tag selector → marker size
 
     # ── Marker size slider ───────────────────────────────────────────────
-    Label(panel[row, 1], ""; tellwidth = false)  # spacer
-    row += 1
-    Label(panel[row, 1], "Marker size:"; halign = :left, tellwidth = false)
+    Label(
+        panel_grid[row, 1],
+        "Marker size:";
+        halign = :left,
+        tellwidth = false,
+        font = :bold,
+    )
     row += 1
     sl_range = 5:1:40
     start_val = clamp(round(Int, sess.marker_size), first(sl_range), last(sl_range))
-    size_slider =
-        Slider(panel[row, 1]; range = sl_range, startvalue = start_val, tellwidth = true)
+    size_slider = Slider(
+        panel_grid[row, 1];
+        range = sl_range,
+        startvalue = start_val,
+        tellwidth = true,
+    )
     row += 1
+    row_after_slider = row - 1  # section boundary: marker size → counts
     on(size_slider.value) do v
         set_marker_size!(sess, Float64(v))
         for sp in scatter_plots
@@ -285,32 +413,60 @@ function _launch_gui(sess::CountSession, img)
     end
 
     # ── Count display ────────────────────────────────────────────────────
-    Label(panel[row, 1], ""; tellwidth = false)  # spacer
-    row += 1
-    Label(panel[row, 1], "Counts:"; halign = :left, tellwidth = false)
+    Label(panel_grid[row, 1], "Counts:"; halign = :left, tellwidth = false, font = :bold)
     row += 1
 
     total_lbl = @lift("Total: $($total_obs)")
-    Label(panel[row, 1], total_lbl; halign = :left, tellwidth = false)
+    Label(panel_grid[row, 1], total_lbl; halign = :left, tellwidth = false)
     row += 1
 
     for (i, tag) in enumerate(sess.tags)
         tag_lbl = @lift("$(tag.name): $($(count_obs[i]))")
-        Label(panel[row, 1], tag_lbl; halign = :left, color = tag.color, tellwidth = false)
+        Label(
+            panel_grid[row, 1],
+            tag_lbl;
+            halign = :left,
+            color = tag.color,
+            tellwidth = false,
+        )
         row += 1
     end
+    row_after_counts = row - 1  # section boundary: counts → action buttons
 
     # ── Action buttons ───────────────────────────────────────────────────
-    Label(panel[row, 1], ""; tellwidth = false)  # spacer
+    save_btn = Button(
+        panel_grid[row, 1];
+        btn_style...,
+        label = "Save session",
+        tellwidth = true,
+        height = 36,
+    )
     row += 1
-    save_btn = Button(panel[row, 1]; label = "Save session", tellwidth = true, height = 36)
+    load_btn = Button(
+        panel_grid[row, 1];
+        btn_style...,
+        label = "Load session",
+        tellwidth = true,
+        height = 36,
+    )
     row += 1
-    load_btn = Button(panel[row, 1]; label = "Load session", tellwidth = true, height = 36)
-    row += 1
-    export_btn = Button(panel[row, 1]; label = "Export CSV", tellwidth = true, height = 36)
+    export_btn = Button(
+        panel_grid[row, 1];
+        btn_style...,
+        label = "Export CSV",
+        tellwidth = true,
+        height = 36,
+    )
     row += 1
 
-    Label(panel[row, 1], status_obs; halign = :left, tellwidth = false)
+    Label(panel_grid[row, 1], status_obs; halign = :left, tellwidth = false)
+
+    # ── Section spacing ──────────────────────────────────────────────────
+    # Add visual gaps at major section boundaries (replaces the empty spacer Labels).
+    rowgap!(panel_grid, row_after_zoom, 14)
+    rowgap!(panel_grid, row_after_tags, 14)
+    rowgap!(panel_grid, row_after_slider, 14)
+    rowgap!(panel_grid, row_after_counts, 14)
 
     # ── File path helpers ────────────────────────────────────────────────
     function toml_path()
