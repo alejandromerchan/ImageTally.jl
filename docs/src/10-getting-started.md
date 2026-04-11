@@ -91,19 +91,33 @@ scripting, batch processing, or building custom tools on top of ImageTally.
 
 ### Creating a session
 
-```julia
-using ImageTally
+The base `new_session` requires the image dimensions in pixels.
+There are two ways to supply them.
 
-tags = [Tag("male", :blue, :circle), Tag("female", :red, :utriangle)]
-sess = new_session("moths.jpg", 3456, 5184; tags)
-```
-
-When GLMakie is loaded, `new_session` can read image dimensions automatically:
+**Option 1 — with GLMakie (recommended):** loading GLMakie activates an extension
+that adds a `new_session(path; tags)` overload. It reads the image file via FileIO
+and extracts the dimensions automatically:
 
 ```julia
 using GLMakie, ImageTally
 
+tags = [Tag("male", :blue, :circle), Tag("female", :red, :utriangle)]
 sess = new_session("moths.jpg"; tags)
+```
+
+**Option 2 — without GLMakie:** pass the dimensions explicitly. If you already know
+them (e.g., from your imaging pipeline), pass them directly. Otherwise, use FileIO
+to read them:
+
+```julia
+using FileIO, ImageTally
+
+# size() on a loaded image returns (height, width)
+img = FileIO.load("moths.jpg")
+h, w = size(img)
+
+tags = [Tag("male", :blue, :circle), Tag("female", :red, :utriangle)]
+sess = new_session("moths.jpg", w, h; tags)
 ```
 
 ### Adding, moving, and deleting points
