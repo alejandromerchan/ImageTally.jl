@@ -26,6 +26,10 @@ on:
         required: false
         type: boolean
         default: false
+      use_display:
+        required: false
+        type: boolean
+        default: false
     secrets:
       codecov_token:
         required: true
@@ -45,14 +49,19 @@ jobs:
       - name: Use Julia cache
         uses: julia-actions/cache@v3
       - uses: julia-actions/julia-buildpkg@v1
-      - name: Install Xvfb (Linux only)
-        if: runner.os == 'Linux'
+      - name: Add GLMakie and FileIO to test environment (GUI tests only)
+        if: ${{ inputs.use_display }}
+        run: julia --project=test -e 'import Pkg; Pkg.add(["GLMakie", "FileIO"])'
+      - name: Install Xvfb (Linux GUI tests only)
+        if: ${{ inputs.use_display && runner.os == 'Linux' }}
         run: sudo apt-get update -qq && sudo apt-get install -y xvfb
-      - name: Run tests (Linux with virtual display)
-        if: runner.os == 'Linux'
+      - name: Run tests with GLMakie and virtual display (Linux GUI)
+        if: ${{ inputs.use_display && runner.os == 'Linux' }}
+        env:
+          IMAGETALLY_TEST_GUI: "true"
         run: xvfb-run -s "-screen 0 1024x768x24" julia --project --code-coverage=user -e 'import Pkg; Pkg.test(coverage=true)'
-      - name: Run tests (non-Linux)
-        if: runner.os != 'Linux'
+      - name: Run logic tests (no GLMakie required)
+        if: ${{ !inputs.use_display }}
         uses: julia-actions/julia-runtest@v1
       - uses: julia-actions/julia-processcoverage@v1
         if: ${{ inputs.run_codecov }}

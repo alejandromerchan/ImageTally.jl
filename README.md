@@ -38,6 +38,9 @@ To use the interactive GUI, also install GLMakie and FileIO:
 pkg> add GLMakie FileIO
 ```
 
+> **Platform note:** The GLMakie-based GUI extension is officially tested on Linux only.
+> It may work on macOS and Windows, but those platforms are not covered by the CI suite.
+
 ## Quick Start
 
 ### GUI (interactive counting)

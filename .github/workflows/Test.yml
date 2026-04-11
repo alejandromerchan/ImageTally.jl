@@ -11,14 +11,15 @@ env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
-  test:
+  test-logic:
     uses: ./.github/workflows/ReusableTest.yml
     with:
       os: ${{ matrix.os }}
       version: ${{ matrix.version }}
       arch: ${{ matrix.arch }}
       allow_failure: ${{ matrix.allow_failure }}
-      run_codecov: ${{ matrix.version == '1' && matrix.os == 'ubuntu-latest' }}
+      run_codecov: false
+      use_display: false
     secrets:
       codecov_token: ${{ secrets.CODECOV_TOKEN }}
     strategy:
@@ -29,12 +30,46 @@ jobs:
           - "1"
         os:
           - ubuntu-latest
-
+          - macos-latest
+          - windows-latest
         arch:
           - x64
         allow_failure: [false]
         include:
           - version: "nightly"
             os: ubuntu-latest
+            arch: x64
+            allow_failure: true
+          - version: "nightly"
+            os: macos-latest
+            arch: x64
+            allow_failure: true
+          - version: "nightly"
+            os: windows-latest
+            arch: x64
+            allow_failure: true
+
+  test-gui:
+    uses: ./.github/workflows/ReusableTest.yml
+    with:
+      os: ubuntu-latest
+      version: ${{ matrix.version }}
+      arch: ${{ matrix.arch }}
+      allow_failure: ${{ matrix.allow_failure }}
+      run_codecov: ${{ matrix.version == '1' }}
+      use_display: true
+    secrets:
+      codecov_token: ${{ secrets.CODECOV_TOKEN }}
+    strategy:
+      fail-fast: false
+      matrix:
+        version:
+          - "lts"
+          - "1"
+        arch:
+          - x64
+        allow_failure: [false]
+        include:
+          - version: "nightly"
             arch: x64
             allow_failure: true
