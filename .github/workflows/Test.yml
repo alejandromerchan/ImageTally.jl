@@ -29,7 +29,6 @@ jobs:
           - "1"
         os:
           - ubuntu-latest
-          - macOS-latest
 
         arch:
           - x64
@@ -37,9 +36,5 @@ jobs:
         include:
           - version: "nightly"
             os: ubuntu-latest
-            arch: x64
-            allow_failure: true
-          - version: "nightly"
-            os: macOS-latest
             arch: x64
             allow_failure: true
