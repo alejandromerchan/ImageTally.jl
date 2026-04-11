@@ -84,6 +84,64 @@ using FileIO
         @test_throws ArgumentError launch_counter(sess)
     end
 
+    @testset "launch_counter(path) — file not found" begin
+        @test_throws ArgumentError launch_counter("/nonexistent/path/image.jpg")
+    end
+
+    @testset "launch_counter(path) — success" begin
+        path = synthetic_image(200, 300)   # height=200, width=300
+        try
+            fig, sess = launch_counter(path)
+            @test fig isa GLMakie.Figure
+            @test sess isa CountSession
+            @test sess.image_path == path
+            @test sess.image_width == 300
+            @test sess.image_height == 200
+            @test sess.active_tag == sess.tags[1].name
+            @test isempty(sess.points)
+        finally
+            isfile(path) && rm(path)
+            GLMakie.closeall()
+        end
+    end
+
+    @testset "launch_counter(path; session=...) — resume session" begin
+        path = synthetic_image(100, 100)
+        sess_path = tempname() * ".toml"
+        try
+            # Build a session, add a point, save it, then resume via launch_counter.
+            sess_orig = new_session(path)
+            add_point!(sess_orig, 50.0, 50.0)
+            save_session(sess_orig, sess_path)
+
+            fig, sess = launch_counter(path; session = sess_path)
+            @test fig isa GLMakie.Figure
+            @test sess isa CountSession
+            @test length(sess.points) == 1
+            @test sess.points[1].tag == sess_orig.active_tag
+        finally
+            isfile(path) && rm(path)
+            isfile(sess_path) && rm(sess_path)
+            GLMakie.closeall()
+        end
+    end
+
+    @testset "launch_counter(sess) — success" begin
+        path = synthetic_image(150, 250)   # height=150, width=250
+        tags = [Tag("egg", :red, :circle), Tag("larva", :blue, :utriangle)]
+        try
+            sess = new_session(path; tags = tags)
+            add_point!(sess, 100.0, 75.0)
+            fig, sess2 = launch_counter(sess)
+            @test fig isa GLMakie.Figure
+            @test sess2 === sess
+            @test length(sess2.points) == 1
+        finally
+            isfile(path) && rm(path)
+            GLMakie.closeall()
+        end
+    end
+
     # ── Zoom limit helpers ───────────────────────────────────────────────
     # The zoom math lives in GLMakieExt as _zoom_in_limits / _zoom_out_limits.
     # Access them via Base.get_extension so they can be tested without opening a window.
