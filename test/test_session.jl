@@ -250,3 +250,9 @@
     end
 
 end
+
+@testset "launch_counter fallback (no GLMakie)" begin
+    # Before GLMakie is loaded the generic fallback should throw a helpful error.
+    @test_throws ArgumentError launch_counter("any_path.jpg")
+    @test_throws ArgumentError launch_counter(42)
+end
