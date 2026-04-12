@@ -6,6 +6,7 @@
 
 using GLMakie
 using FileIO
+using ColorTypes
 
 @testset "GLMakie extension" begin
 
@@ -140,6 +141,63 @@ using FileIO
             isfile(path) && rm(path)
             GLMakie.closeall()
         end
+    end
+
+    # ── _normalize_image ─────────────────────────────────────────────────
+    # Access the internal helper via the extension handle.
+
+    @testset "_normalize_image — 2D array passes through unchanged" begin
+        img2d = fill(Gray{N0f8}(0.5), 100, 200)
+        result = ext._normalize_image(img2d)
+        @test result === img2d   # exact same object, no copy
+        @test ndims(result) == 2
+        @test size(result) == (100, 200)
+    end
+
+    @testset "_normalize_image — 3D Colorant array (TIF loader layout)" begin
+        # TiffImages loads single-channel files as Array{Gray{N0f8}, 3} of shape (H, W, 1).
+        img3d = fill(Gray{N0f8}(0.7), 80, 120, 1)
+        result = ext._normalize_image(img3d)
+        @test ndims(result) == 2
+        @test size(result) == (80, 120)
+        @test result[1, 1] == Gray{N0f8}(0.7)
+    end
+
+    @testset "_normalize_image — 3D RGB Colorant array" begin
+        img3d = fill(RGB{N0f8}(1, 0, 0), 60, 90, 1)
+        result = ext._normalize_image(img3d)
+        @test ndims(result) == 2
+        @test size(result) == (60, 90)
+        @test result[1, 1] == RGB{N0f8}(1, 0, 0)
+    end
+
+    @testset "_normalize_image — 3D raw numeric, C=1" begin
+        img3d = ones(Float32, 50, 80, 1)
+        result = ext._normalize_image(img3d)
+        @test ndims(result) == 2
+        @test size(result) == (50, 80)
+        @test result[1, 1] == 1.0f0
+    end
+
+    @testset "_normalize_image — 3D raw numeric, C=3 → RGB matrix" begin
+        img3d = zeros(Float32, 40, 60, 3)
+        img3d[:, :, 1] .= 1.0f0   # red channel full
+        result = ext._normalize_image(img3d)
+        @test ndims(result) == 2
+        @test size(result) == (40, 60)
+        @test eltype(result) <: Colorant
+        @test red(result[1, 1]) ≈ 1.0f0
+        @test green(result[1, 1]) ≈ 0.0f0
+    end
+
+    @testset "_normalize_image — 3D raw numeric, C=4 → RGBA matrix" begin
+        img3d = zeros(Float32, 30, 50, 4)
+        img3d[:, :, 4] .= 0.5f0   # alpha channel
+        result = ext._normalize_image(img3d)
+        @test ndims(result) == 2
+        @test size(result) == (30, 50)
+        @test eltype(result) <: Colorant
+        @test alpha(result[1, 1]) ≈ 0.5f0
     end
 
     # ── Zoom limit helpers ───────────────────────────────────────────────

@@ -16,6 +16,13 @@ To use the interactive GUI, also install GLMakie and FileIO:
 pkg> add GLMakie FileIO
 ```
 
+### Supported image formats
+
+Any format that FileIO can load is accepted: JPEG, PNG, TIF/TIFF, BMP, and others.
+TIF files are fully supported, including multi-channel and single-channel variants that
+some TIF loaders return as 3-dimensional arrays — ImageTally normalises these automatically
+before display.
+
 ## Interactive GUI
 
 The graphical counter requires GLMakie to be loaded **before** `ImageTally`.
