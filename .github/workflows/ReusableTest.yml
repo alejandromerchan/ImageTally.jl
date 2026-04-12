@@ -49,14 +49,9 @@ jobs:
       - name: Use Julia cache
         uses: julia-actions/cache@v3
       - uses: julia-actions/julia-buildpkg@v1
-      - name: Add GLMakie and FileIO to test environment (GUI tests only)
+      - name: Instantiate test environment with GUI dependencies (GUI tests only)
         if: ${{ inputs.use_display }}
-        run: |
-          julia --project=test -e '
-            import Pkg
-            Pkg.develop(Pkg.PackageSpec(path=pwd()))
-            Pkg.add(["GLMakie", "FileIO"])
-            Pkg.instantiate()'
+        run: julia --project=test -e 'import Pkg; Pkg.instantiate()'
       - name: Install Xvfb (Linux GUI tests only)
         if: ${{ inputs.use_display && runner.os == 'Linux' }}
         run: sudo apt-get update -qq && sudo apt-get install -y xvfb
