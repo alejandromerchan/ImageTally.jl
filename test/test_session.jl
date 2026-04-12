@@ -7,6 +7,26 @@
         @test MAX_TAGS == 10
     end
 
+    @testset "Tag constructor" begin
+        # Valid tag
+        tag = Tag("male", :blue, :circle)
+        @test tag.name == "male"
+        @test tag.color == :blue
+        @test tag.marker == :circle
+
+        # Empty name throws
+        @test_throws ArgumentError Tag("", :blue, :circle)
+
+        # Unknown marker warns but succeeds
+        tag2 = @test_logs (:warn,) Tag("test", :red, :star5)
+        @test tag2.marker == :star5
+
+        # All documented valid markers are accepted without warning
+        for m in VALID_MARKERS
+            @test Tag("t", :red, m).marker == m
+        end
+    end
+
     @testset "new_session" begin
         session = new_session("test.jpg", 3456, 5184)
 
@@ -31,6 +51,17 @@
         # Too many tags throws
         too_many = [Tag("tag$i", :blue, :circle) for i = 1:(MAX_TAGS+1)]
         @test_throws ArgumentError new_session("test.jpg", 3456, 5184; tags = too_many)
+
+        # Empty image_path throws
+        @test_throws ArgumentError new_session("", 3456, 5184)
+
+        # Non-positive width throws
+        @test_throws ArgumentError new_session("test.jpg", 0, 5184)
+        @test_throws ArgumentError new_session("test.jpg", -1, 5184)
+
+        # Non-positive height throws
+        @test_throws ArgumentError new_session("test.jpg", 3456, 0)
+        @test_throws ArgumentError new_session("test.jpg", 3456, -1)
     end
 
     @testset "add_point!" begin
@@ -50,6 +81,11 @@
         point2 = add_point!(session, 1000.0, 1000.0)
         @test point2.id == 2
         @test length(session.points) == 2
+
+        # Integer coordinates are accepted (Real widening)
+        point3 = add_point!(session, 1728, 2592)
+        @test point3.x ≈ 0.5
+        @test point3.y ≈ 0.5
     end
 
     @testset "delete_point!" begin
@@ -170,11 +206,23 @@
         set_marker_size!(session, 1.0)
         @test session.marker_size == 1.0
 
+        # Integer size is accepted (Real widening)
+        set_marker_size!(session, 20)
+        @test session.marker_size == 20.0
+
         # Zero throws
         @test_throws ArgumentError set_marker_size!(session, 0.0)
 
         # Negative throws
         @test_throws ArgumentError set_marker_size!(session, -1.0)
+
+        # Unusually large size warns
+        @test_logs (:warn,) set_marker_size!(session, 201.0)
+        @test session.marker_size == 201.0
+
+        # Exactly 200 does not warn
+        set_marker_size!(session, 200.0)
+        @test session.marker_size == 200.0
     end
 
     @testset "get_tag" begin

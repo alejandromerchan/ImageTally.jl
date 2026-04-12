@@ -1,19 +1,38 @@
 using Dates: Dates, DateTime
 
 """
+Valid GLMakie marker symbols accepted by ImageTally.
+"""
+const VALID_MARKERS =
+    (:circle, :utriangle, :dtriangle, :rect, :diamond, :xcross, :cross, :pentagon)
+
+"""
     Tag
 
 Represents a user-defined counting category with visual properties.
 
 # Fields
-- `name::String`: Display name (e.g. "male", "female", "egg")
-- `color::Symbol`: Marker color (e.g. :red, :blue)
-- `marker::Symbol`: Marker shape (e.g. :circle, :utriangle)
+- `name::String`: Display name (e.g. "male", "female", "egg"). Must not be empty.
+- `color::Symbol`: Marker color (e.g. `:red`, `:blue`, `:green`). GLMakie accepts any
+  named color; commonly used values include `:red`, `:blue`, `:green`, `:orange`,
+  `:purple`, `:cyan`, `:magenta`, `:yellow`, `:black`, `:white`, `:gray`.
+- `marker::Symbol`: Marker shape (e.g. `:circle`, `:utriangle`). Known supported markers
+  are $(VALID_MARKERS). A warning is issued for unrecognised symbols.
+
+# Throws
+- `ArgumentError` if `name` is empty.
 """
 struct Tag
     name::String
     color::Symbol
     marker::Symbol
+
+    function Tag(name::String, color::Symbol, marker::Symbol)
+        isempty(name) && throw(ArgumentError("Tag name must not be empty"))
+        marker in VALID_MARKERS ||
+            @warn "Unknown marker :$marker — supported markers are: $(join(string.(":", collect(VALID_MARKERS)), ", "))"
+        new(name, color, marker)
+    end
 end
 
 """

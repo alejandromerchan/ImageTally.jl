@@ -23,6 +23,11 @@ Create a new counting session for the given image.
 session = new_session("moths.jpg", 3456, 5184)
 session = new_session("moths.jpg", 3456, 5184; tags=[Tag("male", :blue, :circle), Tag("female", :red, :utriangle)])
 ```
+
+# Throws
+- `ArgumentError` if `image_path` is empty.
+- `ArgumentError` if `width` or `height` is not positive.
+- `ArgumentError` if `tags` is empty or exceeds `MAX_TAGS`.
 """
 function new_session(
     image_path::String,
@@ -30,6 +35,9 @@ function new_session(
     height::Int;
     tags::Vector{Tag} = default_tags(),
 )
+    isempty(image_path) && throw(ArgumentError("image_path must not be empty"))
+    width > 0 || throw(ArgumentError("Image width must be positive, got $width"))
+    height > 0 || throw(ArgumentError("Image height must be positive, got $height"))
     isempty(tags) && throw(ArgumentError("Session must have at least one tag"))
     length(tags) > MAX_TAGS &&
         throw(ArgumentError("Maximum of $MAX_TAGS tags allowed, got $(length(tags))"))
@@ -50,13 +58,15 @@ end
 
 Add a new point at the given pixel coordinates using the active tag.
 Coordinates are converted to relative and clamped to valid range.
+Both integer and floating-point coordinates are accepted.
 
 # Examples
 ```julia
 add_point!(session, 1728.0, 2592.0)
+add_point!(session, 1728, 2592)
 ```
 """
-function add_point!(session::CountSession, x_px::Float64, y_px::Float64)
+function add_point!(session::CountSession, x_px::Real, y_px::Real)
     x_rel, y_rel = pixel_to_relative(x_px, y_px, session.image_width, session.image_height)
     x_rel, y_rel = clamp_to_image(x_rel, y_rel)
     point = CountPoint(session.next_id, x_rel, y_rel, session.active_tag, Dates.now())
@@ -88,13 +98,15 @@ end
 
 Move the point with the given id to new pixel coordinates.
 Returns true if found and moved, false if no point with that id exists.
+Both integer and floating-point coordinates are accepted.
 
 # Examples
 ```julia
 move_point!(session, 1, 1800.0, 2600.0)
+move_point!(session, 1, 1800, 2600)
 ```
 """
-function move_point!(session::CountSession, id::Int, x_px::Float64, y_px::Float64)
+function move_point!(session::CountSession, id::Int, x_px::Real, y_px::Real)
     idx = findfirst(p -> p.id == id, session.points)
     isnothing(idx) && return false
     x_rel, y_rel = pixel_to_relative(x_px, y_px, session.image_width, session.image_height)
@@ -117,9 +129,9 @@ point = find_nearest_point(session, 1728.0, 2592.0)
 """
 function find_nearest_point(
     session::CountSession,
-    x_px::Float64,
-    y_px::Float64;
-    threshold::Float64 = 50.0,
+    x_px::Real,
+    y_px::Real;
+    threshold::Real = 50.0,
 )
     isempty(session.points) && return nothing
 
@@ -194,15 +206,24 @@ end
     set_marker_size!(session, size) -> Nothing
 
 Set the global marker display size. Must be positive.
+Both integer and floating-point values are accepted.
+A warning is issued for sizes above 200, which are unusually large and may
+obscure the image.
 
 # Examples
 ```julia
 set_marker_size!(session, 20.0)
+set_marker_size!(session, 20)
 ```
+
+# Throws
+- `ArgumentError` if `size` is not positive.
 """
-function set_marker_size!(session::CountSession, size::Float64)
+function set_marker_size!(session::CountSession, size::Real)
     size > 0 || throw(ArgumentError("Marker size must be positive, got $size"))
-    session.marker_size = size
+    size > 200 &&
+        @warn "Marker size $size is unusually large; markers may obscure the image"
+    session.marker_size = Float64(size)
     return nothing
 end
 
