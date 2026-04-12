@@ -146,6 +146,8 @@ using ColorTypes
     # ── _normalize_image ─────────────────────────────────────────────────
     # Access the internal helper via the extension handle.
 
+    ext = Base.get_extension(ImageTally, :GLMakieExt)
+
     @testset "_normalize_image — 2D array passes through unchanged" begin
         img2d = fill(Gray{N0f8}(0.5), 100, 200)
         result = ext._normalize_image(img2d)
@@ -203,8 +205,6 @@ using ColorTypes
     # ── Zoom limit helpers ───────────────────────────────────────────────
     # The zoom math lives in GLMakieExt as _zoom_in_limits / _zoom_out_limits.
     # Access them via Base.get_extension so they can be tested without opening a window.
-
-    ext = Base.get_extension(ImageTally, :GLMakieExt)
 
     @testset "_zoom_in_limits — shrinks view around center" begin
         # 100×80 view centered at (50, 40), factor 1.5 → each half-span ÷ 1.5
