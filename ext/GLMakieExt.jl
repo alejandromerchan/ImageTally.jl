@@ -2,6 +2,7 @@ module GLMakieExt
 
 using GLMakie
 using FileIO
+using ColorTypes
 import ImageTally
 using ImageTally:
     Tag,
@@ -164,7 +165,37 @@ end
 # Internal GUI builder
 # -----------------------------------------------------------------------
 
+"""
+    _normalize_image(img) -> AbstractMatrix
+
+Ensure `img` is a 2D matrix suitable for Makie's `image!`.
+
+Some TIF loaders (e.g. TiffImages) return a 3D `Array{<:Colorant, 3}` with
+shape `(H, W, 1)` even for single-channel files, or `(H, W, C)` for
+multi-channel raw arrays.  Makie requires an `AbstractMatrix`, so we squeeze
+or reconstruct here.
+"""
+function _normalize_image(img::AbstractArray)
+    ndims(img) == 2 && return img
+    ndims(img) != 3 && error("Cannot display image with $(ndims(img)) dimensions")
+    H, W, C = size(img)
+    # Element type is already a full Colorant (Gray, RGB, …): the 3rd dimension
+    # is spurious (size-1 channel dim from the TIF loader).  Slice it off.
+    if eltype(img) <: Colorant
+        return img[:, :, 1]
+    end
+    # Raw numeric channels-last layout
+    C == 1 && return img[:, :, 1]
+    C == 3 && return [RGB(img[i, j, 1], img[i, j, 2], img[i, j, 3]) for i = 1:H, j = 1:W]
+    C == 4 && return [
+        RGBA(img[i, j, 1], img[i, j, 2], img[i, j, 3], img[i, j, 4]) for i = 1:H, j = 1:W
+    ]
+    # Fallback: first channel only
+    return img[:, :, 1]
+end
+
 function _launch_gui(sess::CountSession, img)
+    img = _normalize_image(img)
     n_tags = length(sess.tags)
     h = sess.image_height
     w = sess.image_width

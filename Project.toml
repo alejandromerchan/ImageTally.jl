@@ -11,13 +11,15 @@ Dates = "ade2ca70-3891-5945-98fb-dc099432e06a"
 TOML = "fa267f1f-6049-4f14-aa54-33bafae1ed76"
 
 [weakdeps]
+ColorTypes = "3da002f7-5984-5a60-b8a6-cbb66c0b333f"
 FileIO = "5789e2e9-d7fb-5bc7-8068-2c6fae9b9549"
 GLMakie = "e9467ef8-e4e7-5192-8a1a-b1aee30e663a"
 
 [extensions]
-GLMakieExt = ["GLMakie", "FileIO"]
+GLMakieExt = ["GLMakie", "FileIO", "ColorTypes"]
 
 [compat]
+ColorTypes = "0.11, 0.12"
 Dates = "1"
 FileIO = "1"
 GLMakie = "0.10, 0.11, 0.12, 0.13"
