@@ -169,3 +169,125 @@ After that, you only need to wait and verify:
 - After the release is create, a "docs" GitHub action will start for the tag.
 - After it passes, a deploy action will run.
 - After that runs, the [stable docs](https://alejandromerchan.github.io/ImageTally.jl/stable) should be updated. Check them and look for the version number.
+
+## CI and package environment notes
+
+This section documents hard-won knowledge about Julia's package environment
+behavior that is critical while ImageTally is not yet registered in the Julia
+General Registry.
+
+### Two distinct Pkg resolution paths
+
+Julia's Pkg has two fundamentally different resolution paths, and they behave
+differently for unregistered local packages:
+
+| Resolution path | Respects `[sources]`? |
+| --- | --- |
+| `Pkg.add()` / `Pkg.resolve()` / `Pkg.instantiate()` (no Manifest) | **No** — calls `check_registered` before consulting `[sources]` |
+| `Pkg.test()` sandbox | **Yes** — resolves local sources by path before registry lookup |
+
+When there is no `Manifest.toml`, the explicit Pkg commands trigger a full
+resolution pass (`up`) that calls `check_registered` on every package in
+`[deps]`. The `[sources]` path hint is checked only after registry validation,
+so ImageTally fails with `expected package ImageTally to be registered` before
+the local path is ever consulted.
+
+`Pkg.test()`'s sandbox was specifically designed to handle this case: it
+resolves `[sources]` entries first, by local path, without a registry lookup.
+
+### The golden rules for CI
+
+1. **Never call `Pkg.add()`, `Pkg.resolve()`, or `Pkg.instantiate()` in CI
+   against an environment that lists an unregistered package.**
+
+2. **Let `Pkg.test()` handle environment resolution.** Its sandbox correctly
+   handles `[sources]` with no manual intervention.
+
+3. **Declare all test dependencies statically in `test/Project.toml`.** Do not
+   install anything dynamically in CI.
+
+4. **`Pkg.develop()` before `Pkg.add()` does not work** for the test
+   environment. Although this pattern is used correctly in the `docs/` workflow,
+   the `test/` environment already declares ImageTally via `[sources]`. Calling
+   `Pkg.develop()` again writes conflicting state into the Manifest, and
+   `Pkg.test()`'s sandbox merge rejects it with `can not merge projects`.
+
+The correct CI pattern:
+
+```yaml
+# WRONG — triggers check_registered before [sources] is consulted
+- name: Install dependencies
+  run: julia --project=test -e 'import Pkg; Pkg.add(["GLMakie", "FileIO"])'
+
+# WRONG — Pkg.develop() conflicts with the existing [sources] declaration
+- name: Install dependencies
+  run: |
+    julia --project=test -e '
+      import Pkg
+      Pkg.develop(Pkg.PackageSpec(path=pwd()))
+      Pkg.add(["GLMakie", "FileIO"])'
+
+# CORRECT — declare everything in test/Project.toml, no install step needed
+# Pkg.test() resolves the sandbox automatically
+```
+
+### The Julia 1.12 workspace change
+
+BestieTemplate generates a `[workspace]` declaration in `Project.toml`, which
+triggered a behavioral change in Julia 1.12:
+
+- **Before Julia 1.12:** `Pkg.test()` automatically injected the root package
+  into the test sandbox. ImageTally did not need to appear in
+  `test/Project.toml`.
+- **From Julia 1.12:** With `[workspace]`, sub-projects (`test/`, `docs/`) are
+  treated as peers. The root package is **not** auto-injected — ImageTally must
+  be declared in both `[deps]` and `[sources]` in `test/Project.toml`.
+
+The correct `test/Project.toml` pattern that works across all supported versions:
+
+```toml
+[deps]
+ImageTally = "3a0688b7-cdea-55d2-b485-88f3d59bc26e"  # required for Julia 1.12+
+GLMakie    = "e9467ef8-e4e7-5192-8a1a-b1aee30e663a"
+FileIO     = "5789e2e9-d7fb-5bc7-8068-2c6fae9b9549"
+Test       = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+# ... other test deps
+
+[sources]
+ImageTally = {path = ".."}  # used by Pkg.test() sandbox; bypasses registry
+```
+
+### After ImageTally is registered
+
+Once ImageTally is registered in the Julia General Registry, remove only the
+`[sources]` block from `test/Project.toml`:
+
+```toml
+# Remove this block after registration:
+[sources]
+ImageTally = {path = ".."}
+```
+
+Keep `ImageTally` in `[deps]` — Pkg will resolve it from the registry instead
+of the local path. No changes are needed in any workflow files.
+
+### Testing package extensions
+
+When testing internal functions of a package extension via
+`Base.get_extension()`, assign the extension handle **before** any `@testset`
+block that uses it. Julia executes `@testset` bodies sequentially — a variable
+assigned after a testset block is not visible inside it.
+
+```julia
+# WRONG — ext is not yet defined when these testsets run
+@testset "uses ext" begin
+    result = ext._internal_function(arg)  # UndefVarError: ext not defined
+end
+ext = Base.get_extension(ImageTally, :GLMakieExt)
+
+# CORRECT
+ext = Base.get_extension(ImageTally, :GLMakieExt)
+@testset "uses ext" begin
+    result = ext._internal_function(arg)  # works
+end
+```
