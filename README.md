@@ -82,8 +82,8 @@ tags = [
 ]
 sess = new_session("image.jpg", 4032, 3024; tags)
 
-# Add points at pixel coordinates
-add_point!(sess, 512.0, 300.0)     # uses the active tag ("egg")
+# Add points at pixel coordinates (integers or floats are both accepted)
+add_point!(sess, 512, 300)         # uses the active tag ("egg")
 set_active_tag!(sess, "parasitized")
 add_point!(sess, 1024.0, 800.0)
 

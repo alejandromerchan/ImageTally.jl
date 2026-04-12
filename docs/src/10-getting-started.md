@@ -83,8 +83,9 @@ sess = new_session("image.jpg"; tags)
 fig, sess = launch_counter(sess)
 ```
 
-Available marker shapes include `:circle`, `:rect`, `:diamond`, `:utriangle`,
-`:dtriangle`, `:star5`, `:cross`, `:xcross`, and others supported by Makie.
+The eight supported marker shapes are `:circle`, `:utriangle`, `:dtriangle`,
+`:rect`, `:diamond`, `:xcross`, `:cross`, and `:pentagon`.
+Other Makie symbols are accepted with a runtime warning.
 
 ## Programmatic API
 
@@ -128,6 +129,8 @@ All coordinates are in pixels relative to the top-left corner of the image.
 
 ```julia
 # Add points — uses the currently active tag
+# Both integers and floats are accepted for pixel coordinates
+add_point!(sess, 512, 300)
 add_point!(sess, 512.0, 300.0)
 
 # Switch active tag
@@ -155,9 +158,9 @@ println(session_summary(sess))
 ### Managing tags
 
 ```julia
-add_tag!(sess, Tag("juvenile", :green, :star5))
+add_tag!(sess, Tag("juvenile", :green, :pentagon))
 has_tag(sess, "juvenile")   # true
-get_tag(sess, "juvenile")   # Tag("juvenile", :green, :star5)
+get_tag(sess, "juvenile")   # Tag("juvenile", :green, :pentagon)
 remove_tag!(sess, "juvenile")
 ```
 
@@ -177,6 +180,22 @@ export_csv(sess, "moths_counts.csv")
 
 The TOML format preserves all session state (image path, dimensions, tags, points, and
 settings) so a session can be resumed exactly where it was left off.
+
+### Input validation
+
+ImageTally validates arguments at the boundary of the public API and throws
+`ArgumentError` with a descriptive message for clearly invalid inputs:
+
+| Call | What is checked |
+| ---- | --------------- |
+| `Tag(name, color, marker)` | `name` must not be empty. An unknown `marker` symbol produces a `@warn` but still succeeds. |
+| `new_session(path, w, h)` | `path` must not be empty; `w` and `h` must be positive. |
+| `set_active_tag!(sess, name)` | `name` must exist in the session's tag list. |
+| `set_marker_size!(sess, size)` | `size` must be positive. Values above 200 produce a `@warn`. |
+| `add_tag!(sess, tag)` | Tag name must not already exist; total tag count must not exceed `MAX_TAGS` (10). |
+| `remove_tag!(sess, name)` | Cannot remove a tag that has counted points. |
+| `save_session` / `load_session` | Path must have a `.toml` extension; file must exist for loading. |
+| `export_csv` | Path must have a `.csv` extension. |
 
 ## Next steps
 
