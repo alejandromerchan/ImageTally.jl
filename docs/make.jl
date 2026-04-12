@@ -6,6 +6,7 @@ DocMeta.setdocmeta!(ImageTally, :DocTestSetup, :(using ImageTally); recursive = 
 # Add titles of sections and overrides page titles
 const titles = Dict(
     # "10-tutorials" => "Tutorials", # example folder title
+    "10-formats.md" => "Image Formats",
     "91-developer.md" => "Developer docs",
 )
 

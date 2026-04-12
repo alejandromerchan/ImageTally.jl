@@ -18,6 +18,8 @@ aerial photographs, or any other discrete objects in high-resolution images.
 - **Session persistence** — save and reload work-in-progress sessions as portable TOML files.
 - **CSV export** — export all counted points with relative and pixel coordinates plus timestamps.
 - **Programmatic API** — create and manipulate sessions entirely in code, no window required.
+- **Multiple image formats** — JPEG, PNG, TIFF (8-bit and 16-bit),
+  and BMP. Large images tested up to 18 megapixels.
 
 ## Getting started
 

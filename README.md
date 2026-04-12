@@ -41,6 +41,36 @@ pkg> add GLMakie FileIO
 > **Platform note:** The GLMakie-based GUI extension is officially tested on Linux only.
 > It may work on macOS and Windows, but those platforms are not covered by the CI suite.
 
+## Supported Image Formats
+
+ImageTally supports any image format loadable by
+[FileIO.jl](https://github.com/JuliaIO/FileIO.jl) and
+[ImageIO.jl](https://github.com/JuliaIO/ImageIO.jl).
+The following formats are tested as part of the CI suite:
+
+| Format | Extension | Color | Notes |
+| ------ | --------- | ----- | ----- |
+| JPEG | `.jpg`, `.jpeg` | RGB | Lossy compression, most common |
+| PNG | `.png` | RGB | Lossless, recommended for reproducibility |
+| TIFF 8-bit | `.tif`, `.tiff` | RGB or Grayscale | Common in microscopy |
+| TIFF 16-bit | `.tif`, `.tiff` | Grayscale | High dynamic range scientific images |
+| BMP | `.bmp` | RGB | Uncompressed, large file size |
+
+### Camera RAW formats
+
+Camera RAW formats (`.rw2`, `.cr2`, `.nef`, `.arw`, etc.) are not
+directly supported. Convert to JPEG or TIFF first using:
+
+- [darktable](https://www.darktable.org/) (free, Linux/macOS/Windows)
+- [RawTherapee](https://rawtherapee.com/) (free, Linux/macOS/Windows)
+- `dcraw` command line tool: `dcraw -T image.rw2`
+
+### Large images
+
+ImageTally has been tested with images up to 3456×5184 pixels (18
+megapixels). Performance depends on your GPU. Images larger than
+~8000px on either dimension may cause slow rendering.
+
 ## Quick Start
 
 ### GUI (interactive counting)
