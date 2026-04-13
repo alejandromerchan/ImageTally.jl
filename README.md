@@ -6,7 +6,8 @@
 [![Coverage](https://codecov.io/gh/alejandromerchan/ImageTally.jl/branch/main/graph/badge.svg)](https://codecov.io/gh/alejandromerchan/ImageTally.jl)
 [![Lint workflow Status](https://github.com/alejandromerchan/ImageTally.jl/actions/workflows/Lint.yml/badge.svg?branch=main)](https://github.com/alejandromerchan/ImageTally.jl/actions/workflows/Lint.yml?query=branch%3Amain)
 [![Docs workflow Status](https://github.com/alejandromerchan/ImageTally.jl/actions/workflows/Docs.yml/badge.svg?branch=main)](https://github.com/alejandromerchan/ImageTally.jl/actions/workflows/Docs.yml?query=branch%3Amain)
-[![DOI](https://zenodo.org/badge/DOI/FIXME)](https://doi.org/FIXME)
+<!-- TODO(zenodo): Register with Zenodo and add DOI badge here only if the tool
+     becomes useful to researchers who need to cite it. See CITATION.cff for metadata. -->
 [![Contributor Covenant](https://img.shields.io/badge/Contributor%20Covenant-2.1-4baaaa.svg)](CODE_OF_CONDUCT.md)
 [![All Contributors](https://img.shields.io/github/all-contributors/alejandromerchan/ImageTally.jl?labelColor=5e1ec7&color=c0ffee&style=flat-square)](#contributors)
 [![BestieTemplate](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/JuliaBesties/BestieTemplate.jl/main/docs/src/assets/badge.json)](https://github.com/JuliaBesties/BestieTemplate.jl)
@@ -25,11 +26,9 @@ Typical use cases include counting insects on traps, cells in microscopy images,
 
 ## Installation
 
-ImageTally.jl is not yet registered in the Julia General Registry. Install it directly from GitHub:
-
 ```julia
 julia> # press ]
-pkg> add https://github.com/alejandromerchan/ImageTally.jl
+pkg> add ImageTally
 ```
 
 To use the interactive GUI, also install GLMakie and FileIO:
