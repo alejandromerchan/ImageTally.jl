@@ -2,12 +2,9 @@
 
 ## Installation
 
-ImageTally.jl is not yet registered in the Julia General Registry.
-Install it directly from GitHub:
-
 ```julia
 julia> # press ] to enter Pkg mode
-pkg> add https://github.com/alejandromerchan/ImageTally.jl
+pkg> add ImageTally
 ```
 
 To use the interactive GUI, also install GLMakie and FileIO:

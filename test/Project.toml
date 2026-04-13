@@ -10,6 +10,3 @@ ImageMagick = "6218d12a-5da1-5696-b52f-db25d2ecc6d1"
 ImageTally = "3a0688b7-cdea-55d2-b485-88f3d59bc26e"
 TOML = "fa267f1f-6049-4f14-aa54-33bafae1ed76"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
-
-[sources]
-ImageTally = {path = ".."}
