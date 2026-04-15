@@ -1,5 +1,6 @@
 # Changes here will be overwritten by Copier
 AddAllcontributors: true
+AddChangelog: false
 AddCitationCFF: true
 AddCodeOfConduct: true
 AddContributionDocs: true
@@ -39,5 +40,5 @@ StrategyLevel: 2
 StrategyReviewExcluded: false
 TestingStrategy: basic
 UseCirrusCI: false
-_commit: fb703fb4f2b7d041fbb178d57b4354f48df950b3
+_commit: v0.18.6
 _src_path: https://github.com/JuliaBesties/BestieTemplate.jl
