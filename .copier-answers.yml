@@ -39,4 +39,4 @@ StrategyLevel: 2
 StrategyReviewExcluded: false
 TestingStrategy: basic
 UseCirrusCI: false
-_src_path: /home/alejandromerchan/.julia/packages/BestieTemplate/fOzc4
+_src_path: https://github.com/JuliaBesties/BestieTemplate.jl
