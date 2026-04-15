@@ -31,7 +31,7 @@ jobs:
       - name: Check for update in the template
         run: |
           pip install copier
-          copier update -A -o rej
+          copier update -A -l -o rej
           echo -e "Automated changed by Copier.yml workflow\n" > /tmp/body.md
           echo -e 'Rejected changes (if any):\n```diff\n' >> /tmp/body.md
           find . -name "*.rej" | xargs cat >> /tmp/body.md
