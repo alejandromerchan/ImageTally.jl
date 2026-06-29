@@ -10,6 +10,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
+        with:
+          token: ${{ secrets.COPIER_PAT }}
       - name: Hack for setup-python cache # https://github.com/actions/setup-python/issues/807
         run: touch requirements.txt
       - name: Setup Python
@@ -29,6 +31,7 @@ jobs:
         id: cpr
         uses: peter-evans/create-pull-request@v8
         with:
+          token: ${{ secrets.COPIER_PAT }}
           commit-message: "chore: :robot: pre-commit update"
           title: "[AUTO] pre-commit update"
           branch: auto-pre-commit-update
