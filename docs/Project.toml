@@ -5,6 +5,7 @@ ImageTally = "3a0688b7-cdea-55d2-b485-88f3d59bc26e"
 
 [compat]
 Documenter = "1"
+LiveServer = "1.6.0"
 
 [sources]
 ImageTally = {path = ".."}
