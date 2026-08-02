@@ -5,6 +5,7 @@ using TOML: TOML
 
 export Tag, CountPoint, CountSession
 export VALID_MARKERS, DEFAULT_MARKER_SIZE, MAX_TAGS
+export SESSION_FORMAT_VERSION
 export pixel_to_relative, relative_to_pixel, clamp_to_image
 export new_session, add_point!, delete_point!, move_point!
 export find_nearest_point, count_by_tag, total_count

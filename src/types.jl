@@ -56,27 +56,50 @@ struct CountPoint
 end
 
 """
-    CountSession
+    CountSession(; image_path, image_width, image_height, active_tag, kwargs...)
 
 Holds all state for a single counting session.
 
-# Fields
+Construct with keywords. `image_path`, `image_width`, `image_height`, and
+`active_tag` are required; the rest default. Requiring those four means there
+is no zero-argument constructor, so a session cannot be built without the
+information needed to make it internally consistent. The positional
+constructor is also available, but prefer the keyword form — it survives
+new fields being added.
+
+Field values are not validated here. Validation lives at the entry points
+(`new_session`, `load_session`, and the mutating helpers), which is where the
+context to produce a good error message exists.
+
+# Required keywords
 - `image_path::String`: Path to the image file
 - `image_width::Int`: Original image width in pixels
 - `image_height::Int`: Original image height in pixels
-- `tags::Vector{Tag}`: Available counting categories
-- `points::Vector{CountPoint}`: All counted points
-- `next_id::Int`: Counter for generating unique point IDs
 - `active_tag::String`: Currently selected tag name
-- `marker_size::Float64`: Display size of markers
+
+# Optional keywords
+- `tags::Vector{Tag} = default_tags()`: Available counting categories
+- `points::Vector{CountPoint} = CountPoint[]`: All counted points
+- `next_id::Int = 1`: Counter for generating unique point IDs
+- `marker_size::Float64 = DEFAULT_MARKER_SIZE`: Display size of markers
+
+# Examples
+```julia
+session = CountSession(;
+    image_path = "moths.jpg",
+    image_width = 3456,
+    image_height = 5184,
+    active_tag = "object",
+)
+```
 """
-mutable struct CountSession
+Base.@kwdef mutable struct CountSession
     image_path::String
     image_width::Int
     image_height::Int
-    tags::Vector{Tag}
-    points::Vector{CountPoint}
-    next_id::Int
+    tags::Vector{Tag} = default_tags()
+    points::Vector{CountPoint} = CountPoint[]
+    next_id::Int = 1
     active_tag::String
-    marker_size::Float64
+    marker_size::Float64 = DEFAULT_MARKER_SIZE
 end
