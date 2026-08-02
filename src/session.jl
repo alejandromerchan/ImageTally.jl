@@ -41,15 +41,15 @@ function new_session(
     isempty(tags) && throw(ArgumentError("Session must have at least one tag"))
     length(tags) > MAX_TAGS &&
         throw(ArgumentError("Maximum of $MAX_TAGS tags allowed, got $(length(tags))"))
-    return CountSession(
-        image_path,
-        width,
-        height,
-        tags,
-        CountPoint[],
-        1,
-        tags[1].name,
-        DEFAULT_MARKER_SIZE,
+    return CountSession(;
+        image_path = image_path,
+        image_width = width,
+        image_height = height,
+        tags = tags,
+        points = CountPoint[],
+        next_id = 1,
+        active_tag = tags[1].name,
+        marker_size = DEFAULT_MARKER_SIZE,
     )
 end
 

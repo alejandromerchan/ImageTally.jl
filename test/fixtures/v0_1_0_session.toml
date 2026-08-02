@@ -1,0 +1,49 @@
+active_tag = "female"
+image_path = "moths.jpg"
+image_width = 3456
+image_height = 5184
+marker_size = 18.0
+
+[[points]]
+tag = "male"
+id = 1
+x = 0.5
+timestamp = "2026-08-02T10:57:31.455"
+y = 0.5
+[[points]]
+tag = "male"
+id = 2
+x = 0.14467592592592593
+timestamp = "2026-08-02T10:57:31.455"
+y = 0.15432098765432098
+[[points]]
+tag = "female"
+id = 3
+x = 0.5787037037037037
+timestamp = "2026-08-02T10:57:31.474"
+y = 0.5787037037037037
+[[points]]
+tag = "female"
+id = 4
+x = 0.9997106481481481
+timestamp = "2026-08-02T10:57:31.474"
+y = 0.9998070987654321
+[[points]]
+tag = "juvenile"
+id = 5
+x = 0.0
+timestamp = "2026-08-02T10:57:31.474"
+y = 0.0
+
+[[tags]]
+name = "male"
+marker = "circle"
+color = "blue"
+[[tags]]
+name = "female"
+marker = "utriangle"
+color = "red"
+[[tags]]
+name = "juvenile"
+marker = "diamond"
+color = "green"

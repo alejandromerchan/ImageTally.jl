@@ -27,6 +27,95 @@
         end
     end
 
+    @testset "CountSession constructor" begin
+        # Keyword form with only the required keywords
+        session = CountSession(;
+            image_path = "moths.jpg",
+            image_width = 3456,
+            image_height = 5184,
+            active_tag = "object",
+        )
+        @test session.image_path == "moths.jpg"
+        @test session.image_width == 3456
+        @test session.image_height == 5184
+        @test session.active_tag == "object"
+
+        # Defaults
+        @test session.tags == default_tags()
+        @test isempty(session.points)
+        @test session.next_id == 1
+        @test session.marker_size == DEFAULT_MARKER_SIZE
+
+        # Defaults are fresh per session, not shared state
+        other = CountSession(;
+            image_path = "other.jpg",
+            image_width = 10,
+            image_height = 20,
+            active_tag = "object",
+        )
+        @test session.tags !== other.tags
+        @test session.points !== other.points
+        push!(other.points, CountPoint(1, 0.5, 0.5, "object", Dates.now()))
+        @test isempty(session.points)
+
+        # Every optional keyword can be supplied
+        tags = [Tag("male", :blue, :circle)]
+        points = [CountPoint(7, 0.25, 0.75, "male", Dates.now())]
+        full = CountSession(;
+            image_path = "full.jpg",
+            image_width = 100,
+            image_height = 200,
+            tags = tags,
+            points = points,
+            next_id = 8,
+            active_tag = "male",
+            marker_size = 30.0,
+        )
+        @test full.tags === tags
+        @test full.points === points
+        @test full.next_id == 8
+        @test full.marker_size == 30.0
+
+        # Each required keyword is genuinely required
+        @test_throws UndefKeywordError CountSession(;
+            image_width = 1,
+            image_height = 1,
+            active_tag = "object",
+        )
+        @test_throws UndefKeywordError CountSession(;
+            image_path = "a.jpg",
+            image_height = 1,
+            active_tag = "object",
+        )
+        @test_throws UndefKeywordError CountSession(;
+            image_path = "a.jpg",
+            image_width = 1,
+            active_tag = "object",
+        )
+        @test_throws UndefKeywordError CountSession(;
+            image_path = "a.jpg",
+            image_width = 1,
+            image_height = 1,
+        )
+
+        # There is no zero-argument constructor
+        @test_throws UndefKeywordError CountSession()
+
+        # The positional constructor is retained
+        positional = CountSession(
+            "pos.jpg",
+            100,
+            200,
+            tags,
+            CountPoint[],
+            1,
+            "male",
+            DEFAULT_MARKER_SIZE,
+        )
+        @test positional.image_path == "pos.jpg"
+        @test positional.active_tag == "male"
+    end
+
     @testset "new_session" begin
         session = new_session("test.jpg", 3456, 5184)
 
