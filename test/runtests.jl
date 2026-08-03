@@ -7,6 +7,7 @@ using ImageTally
     include("test_session.jl")
     include("test_scale.jl")
     include("test_io.jl")
+    include("test_export.jl")
     include("test_format.jl")
     include("test_images.jl")
     if get(ENV, "IMAGETALLY_TEST_GUI", "false") == "true"

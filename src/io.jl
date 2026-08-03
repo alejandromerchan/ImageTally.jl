@@ -343,6 +343,72 @@ end
 # -----------------------------------------------------------------------
 
 """
+Header written for a session with no scale calibration. Unchanged since
+ImageTally v0.1.0.
+"""
+const CSV_HEADER = "id,tag,x_relative,y_relative,x_pixel,y_pixel,timestamp"
+
+"""
+Header written for a calibrated session: three columns inserted before
+`timestamp`, leaving the preceding columns in their existing positions.
+
+The unit is a column rather than a suffix on the coordinate names (`x_mm`)
+because a unit is free-form — `normalize_unit` stores an unrecognised unit as
+given, and "grid squares" would make a hostile column name. As data the unit
+also survives any parse, and pooling rows exported from differently calibrated
+images groups by unit instead of silently mixing dimensions.
+"""
+const CSV_HEADER_SCALED = "id,tag,x_relative,y_relative,x_pixel,y_pixel,x_real,y_real,unit,timestamp"
+
+"""
+    csv_escape(value) -> String
+
+Return `value` as an RFC 4180 CSV field: wrapped in double quotes if it
+contains a comma, a double quote, a carriage return, or a newline, with any
+embedded double quote doubled. A value containing none of those is returned
+unchanged.
+
+Every string-valued column is free-form — a tag is whatever the user typed, and
+so is an unrecognised unit — so a tag named `eggs, parasitized` would otherwise
+shift every following column by one for that row, silently.
+
+Returning ordinary values bare is what keeps output for existing sessions
+byte-identical to what ImageTally v0.1.0 wrote.
+"""
+function csv_escape(value::AbstractString)
+    any(c -> c == ',' || c == '"' || c == '\r' || c == '\n', value) || return String(value)
+    return string('"', replace(value, '"' => "\"\""), '"')
+end
+
+"""
+    csv_row(session, point) -> String
+
+Build the uncalibrated CSV row for `point`, matching [`CSV_HEADER`](@ref).
+"""
+function csv_row(session::CountSession, point::CountPoint)
+    x_px, y_px =
+        relative_to_pixel(point.x, point.y, session.image_width, session.image_height)
+    return "$(point.id),$(csv_escape(point.tag)),$(point.x),$(point.y),$x_px,$y_px,$(csv_escape(string(point.timestamp)))"
+end
+
+"""
+    csv_row_scaled(session, point) -> String
+
+Build the calibrated CSV row for `point`, matching [`CSV_HEADER_SCALED`](@ref).
+
+Only called for a session with a calibration: [`pixels_to_real`](@ref) throws
+without one, so `export_csv` selects between this and [`csv_row`](@ref) up front
+rather than converting speculatively.
+"""
+function csv_row_scaled(session::CountSession, point::CountPoint)
+    x_px, y_px =
+        relative_to_pixel(point.x, point.y, session.image_width, session.image_height)
+    x_real = pixels_to_real(session, x_px)
+    y_real = pixels_to_real(session, y_px)
+    return "$(point.id),$(csv_escape(point.tag)),$(point.x),$(point.y),$x_px,$y_px,$x_real,$y_real,$(csv_escape(session.scale_unit)),$(csv_escape(string(point.timestamp)))"
+end
+
+"""
     export_csv(session, path) -> Nothing
 
 Export the counted points to a CSV file at `path`. Each row represents
@@ -351,6 +417,45 @@ tag, and timestamp.
 
 The CSV includes both relative (0.0-1.0) and absolute pixel coordinates
 so the data is useful regardless of how the image is displayed.
+
+A session with no scale calibration exports seven columns:
+
+```
+id,tag,x_relative,y_relative,x_pixel,y_pixel,timestamp
+```
+
+A calibrated session exports ten, with `x_real`, `y_real`, and `unit`
+inserted before `timestamp`:
+
+```
+id,tag,x_relative,y_relative,x_pixel,y_pixel,x_real,y_real,unit,timestamp
+```
+
+`unit` carries the session's canonical unit — the normalised form, so a session
+calibrated in `um` exports `μm` — repeated on every row.
+
+!!! warning "`x_real` and `y_real` are offsets, not positions"
+    A scale converts *distances*, not positions. `x_real` is the distance from
+    the left edge of the image and `y_real` the distance from its top, so the
+    origin is the corner of the photograph — wherever the camera happened to be
+    framed, which is arbitrary and not comparable between images. `y_real`
+    increases downward, following the image convention rather than the
+    mathematical one.
+
+    Absolute values are therefore not meaningful; differences are. Valid uses:
+    the distance between two points, the extent of a bounding box, an area for a
+    density calculation. Not valid: treating the values as coordinates in any
+    external reference frame.
+
+The calibration endpoints are not exported. They are metadata about the
+measurement, not count data, and they are recorded in the session TOML.
+
+String fields are escaped per RFC 4180 — see [`csv_escape`](@ref) — so a tag or
+unit containing a comma, a quote, or a newline round-trips through any standard
+CSV reader.
+
+# Throws
+- `ArgumentError` if `path` does not have a `.csv` extension.
 
 # Examples
 ```julia
@@ -361,22 +466,15 @@ function export_csv(session::CountSession, path::String)
     endswith(path, ".csv") ||
         throw(ArgumentError("Export file must have a .csv extension, got: $path"))
 
-    open(path, "w") do io
-        # Header
-        println(io, "id,tag,x_relative,y_relative,x_pixel,y_pixel,timestamp")
+    # Selected once, up front: the calibrated path calls `pixels_to_real`, which
+    # throws on an uncalibrated session.
+    header, row =
+        session.has_scale ? (CSV_HEADER_SCALED, csv_row_scaled) : (CSV_HEADER, csv_row)
 
-        # One row per point
+    open(path, "w") do io
+        println(io, header)
         for point in session.points
-            x_px, y_px = relative_to_pixel(
-                point.x,
-                point.y,
-                session.image_width,
-                session.image_height,
-            )
-            println(
-                io,
-                "$(point.id),$(point.tag),$(point.x),$(point.y),$x_px,$y_px,$(point.timestamp)",
-            )
+            println(io, row(session, point))
         end
     end
 
