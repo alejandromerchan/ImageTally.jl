@@ -93,46 +93,7 @@ using Dates: Dates, DateTime
         end
     end
 
-    @testset "export_csv" begin
-        session = test_session()
-        path = tempname() * ".csv"
-
-        try
-            export_csv(session, path)
-            @test isfile(path)
-
-            # Read and check contents
-            lines = readlines(path)
-
-            # Header
-            @test lines[1] == "id,tag,x_relative,y_relative,x_pixel,y_pixel,timestamp"
-
-            # Correct number of rows (header + 3 points)
-            @test length(lines) == 4
-
-            # First point
-            fields = split(lines[2], ",")
-            @test fields[1] == "1"
-            @test fields[2] == "male"
-            @test parse(Float64, fields[3]) ≈ 0.5
-            @test parse(Float64, fields[4]) ≈ 0.5
-            @test parse(Int, fields[5]) == 1728
-            @test parse(Int, fields[6]) == 2592
-
-            # Third point is female
-            fields3 = split(lines[4], ",")
-            @test fields3[2] == "female"
-
-        finally
-            isfile(path) && rm(path)
-        end
-    end
-
-    @testset "export_csv errors" begin
-        session = test_session()
-        @test_throws ArgumentError export_csv(session, "/tmp/test.json")
-        @test_throws ArgumentError export_csv(session, "/tmp/test.txt")
-    end
+    # CSV export lives in test/test_export.jl.
 
     @testset "session_summary" begin
         session = test_session()

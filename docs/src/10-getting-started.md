@@ -243,7 +243,6 @@ save_session(sess, "moths_session.toml")
 sess2 = load_session("moths_session.toml")
 
 # Export counted points to CSV
-# Columns: id, tag, x_relative, y_relative, x_pixel, y_pixel, timestamp
 export_csv(sess, "moths_counts.csv")
 ```
 
@@ -251,6 +250,87 @@ The TOML format preserves all session state (image path, dimensions, tags, point
 scale calibration, and settings) so a session can be resumed exactly where it was
 left off. A session with no calibration writes no `[scale]` table at all, and
 session files written by earlier versions of ImageTally load as uncalibrated.
+
+#### The CSV schema
+
+`export_csv` writes one of two schemas, chosen by whether the session has a
+calibration. Without one it writes seven columns, exactly as every earlier
+version of ImageTally did:
+
+```text
+id,tag,x_relative,y_relative,x_pixel,y_pixel,timestamp
+```
+
+With a calibration it writes ten, inserting `x_real`, `y_real`, and `unit`
+before `timestamp` and leaving every existing column where it was:
+
+```text
+id,tag,x_relative,y_relative,x_pixel,y_pixel,x_real,y_real,unit,timestamp
+```
+
+`x_real` and `y_real` are the pixel coordinates converted through the
+calibration. `unit` is the session's canonical unit repeated on every row — a
+session calibrated in `um` exports `μm`. The unit is a column rather than a
+suffix on the column names (`x_mm`) because a unit is free-form: `grid squares`
+would make an unusable column name, and as data the unit survives any parse and
+keeps rows pooled from differently calibrated images from silently mixing
+dimensions.
+
+The calibration endpoints themselves are not exported — they are metadata about
+the measurement, not count data, and they live in the session TOML.
+
+Values are written at full `Float64` precision, without rounding; formatting is
+left to whatever reads the file. Tags, units, and timestamps are escaped per
+RFC 4180, so a tag named `eggs, parasitized` round-trips through any standard
+CSV reader instead of silently shifting the columns after it.
+
+!!! warning "`x_real` and `y_real` are offsets, not positions"
+    A scale converts **distances**, not positions. `x_real` is the distance
+    from the left edge of the image and `y_real` the distance from its top, so
+    the origin is the corner of the photograph — wherever the camera happened
+    to be framed. That is arbitrary and not comparable between images. `y_real`
+    increases downward, following the image convention rather than the
+    mathematical one. Absolute values are therefore not meaningful;
+    differences are.
+
+So these are valid uses of `x_real` and `y_real`:
+
+- the distance between two counted points;
+- the extent of a bounding box around a group of points;
+- an area, for a density calculation.
+
+And this is not: treating the values as coordinates in any external reference
+frame. Nothing in the data will contradict a reading of `x_real = 4.7 mm` as a
+position rather than an offset, so it is worth being deliberate about it.
+
+#### A worked example: density from the exported columns
+
+Every quantity below is a *difference* of exported values, which is what makes
+it well defined:
+
+```julia
+using CSV
+
+rows = CSV.File("moths_counts.csv")
+unit = first(rows.unit)          # "mm"
+
+# Extent of the counted region — a difference, so the arbitrary origin cancels
+width_real = maximum(rows.x_real) - minimum(rows.x_real)
+height_real = maximum(rows.y_real) - minimum(rows.y_real)
+
+density = length(rows) / (width_real * height_real)
+println("$(round(density; digits = 3)) points per square $unit")
+```
+
+The distance between two counted points works the same way:
+
+```julia
+dx = rows.x_real[2] - rows.x_real[1]
+dy = rows.y_real[2] - rows.y_real[1]
+separation = sqrt(dx^2 + dy^2)   # in `unit`
+```
+
+Equivalently, without exporting: `pixels_to_real(sess, hypot(dx_px, dy_px))`.
 
 ### Input validation
 
