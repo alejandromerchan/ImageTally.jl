@@ -7,6 +7,19 @@ const VALID_MARKERS =
     (:circle, :utriangle, :dtriangle, :rect, :diamond, :xcross, :cross, :pentagon)
 
 """
+Canonical length units recognised by ImageTally's scale calibration.
+
+The micro prefix is U+03BC (GREEK SMALL LETTER MU), not the visually identical
+U+00B5 (MICRO SIGN). Unicode NFKC normalisation maps U+00B5 onto U+03BC, so
+U+03BC is the canonical form; [`normalize_unit`](@ref) rewrites the other one.
+
+Units outside this set are accepted with a warning — see
+[`normalize_unit`](@ref) — so unusual reference objects (a grid square, a body
+length) are not blocked.
+"""
+const VALID_UNITS = ("nm", "μm", "mm", "cm", "m", "in")
+
+"""
     Tag
 
 Represents a user-defined counting category with visual properties.
@@ -83,6 +96,34 @@ context to produce a good error message exists.
 - `next_id::Int = 1`: Counter for generating unique point IDs
 - `marker_size::Float64 = DEFAULT_MARKER_SIZE`: Display size of markers
 
+# Scale calibration keywords
+
+A session with `has_scale = false` — the default — carries no calibration and
+behaves exactly as a session did before calibration existed.
+
+- `has_scale::Bool = false`: Whether a scale calibration is set. This is the
+  authoritative flag; the other scale fields are meaningless when it is `false`.
+- `scale_real_distance::Float64 = 0.0`: Real-world distance between the two
+  scale points, in `scale_unit`.
+- `scale_unit::String = ""`: Unit of `scale_real_distance`, canonicalised by
+  [`normalize_unit`](@ref). Known units are $(VALID_UNITS).
+- `scale_point_1::Tuple{Float64,Float64} = (0.0, 0.0)`: First scale endpoint, in
+  relative coordinates (0.0 to 1.0).
+- `scale_point_2::Tuple{Float64,Float64} = (0.0, 0.0)`: Second scale endpoint, in
+  relative coordinates (0.0 to 1.0).
+
+The endpoints are stored relative, exactly like a `CountPoint`, so they survive
+any change in how the image is displayed. The pixel distance between them is
+**not** stored — it is derived by [`scale_pixel_distance`](@ref), so there is one
+source of truth.
+
+!!! warning "Do not mutate the scale fields directly"
+    [`set_scale!`](@ref) and [`clear_scale!`](@ref) are the only supported ways
+    to change any `scale_*` field or `has_scale`. Assigning to them directly
+    bypasses validation and can leave the session inconsistent — for example a
+    `has_scale = true` session whose endpoints are coincident, which makes every
+    conversion undefined.
+
 # Examples
 ```julia
 session = CountSession(;
@@ -102,4 +143,9 @@ Base.@kwdef mutable struct CountSession
     next_id::Int = 1
     active_tag::String
     marker_size::Float64 = DEFAULT_MARKER_SIZE
+    has_scale::Bool = false
+    scale_real_distance::Float64 = 0.0
+    scale_unit::String = ""
+    scale_point_1::Tuple{Float64,Float64} = (0.0, 0.0)
+    scale_point_2::Tuple{Float64,Float64} = (0.0, 0.0)
 end

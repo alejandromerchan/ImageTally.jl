@@ -4,7 +4,7 @@ using Dates: Dates, DateTime
 using TOML: TOML
 
 export Tag, CountPoint, CountSession
-export VALID_MARKERS, DEFAULT_MARKER_SIZE, MAX_TAGS
+export VALID_MARKERS, VALID_UNITS, DEFAULT_MARKER_SIZE, MAX_TAGS
 export SESSION_FORMAT_VERSION
 export pixel_to_relative, relative_to_pixel, clamp_to_image
 export new_session, add_point!, delete_point!, move_point!
@@ -12,12 +12,15 @@ export find_nearest_point, count_by_tag, total_count
 export set_active_tag!, set_marker_size!
 export get_tag, has_tag, add_tag!, remove_tag!
 export default_tags
+export set_scale!, clear_scale!, scale_pixel_distance
+export pixels_to_real, real_to_pixels
 export save_session, load_session, export_csv, session_summary
 export launch_counter
 
 include("types.jl")
 include("coordinates.jl")
 include("session.jl")
+include("scale.jl")
 include("io.jl")
 
 """

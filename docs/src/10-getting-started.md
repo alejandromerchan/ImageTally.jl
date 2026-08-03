@@ -168,6 +168,71 @@ get_tag(sess, "juvenile")   # Tag("juvenile", :green, :pentagon)
 remove_tag!(sess, "juvenile")
 ```
 
+### Scale calibration
+
+A session can record a scale: a segment of the image whose real-world length you
+know — a scale bar, a ruler, a stage micrometer — from which pixel distances can
+be converted into real units.
+
+Calibrate with `set_scale!`, giving the two endpoints in pixel coordinates (the
+same coordinates `add_point!` takes), the real-world distance between them, and
+its unit:
+
+```julia
+# A scale bar running from (100, 900) to (200, 900) is 2 mm long
+set_scale!(sess, 100.0, 900.0, 200.0, 900.0, 2.0, "mm")
+
+sess.has_scale              # true
+scale_pixel_distance(sess)  # 100.0
+```
+
+The endpoints are stored as relative coordinates (0.0–1.0), exactly like counted
+points, so they survive any change in how the image is displayed. The pixel
+distance is not stored: `scale_pixel_distance` derives it from the endpoints and
+the image dimensions, so there is only one source of truth.
+
+With a calibration in place, distances convert in both directions:
+
+```julia
+pixels_to_real(sess, 50.0)   # 1.0  — 50 px is 1 mm
+real_to_pixels(sess, 1.0)    # 50.0 — 1 mm is 50 px
+```
+
+Both throw an `ArgumentError` if the session has no scale, so an uncalibrated
+session cannot silently produce meaningless numbers.
+
+Calling `set_scale!` again replaces the calibration. `clear_scale!` removes it,
+leaving points and tags untouched:
+
+```julia
+clear_scale!(sess)
+sess.has_scale   # false
+```
+
+`set_scale!` and `clear_scale!` are the only supported ways to change the
+session's scale fields — assigning to `sess.scale_unit` or `sess.has_scale`
+directly bypasses validation and can leave the session inconsistent.
+
+#### Units
+
+The recognised units are `nm`, `μm`, `mm`, `cm`, `m`, and `in`, available as
+`VALID_UNITS`. Common spellings are canonicalised, case-insensitively, so `um`,
+`Micron`, `microns`, and `micrometre` all become `μm`, and `inches` becomes `in`.
+
+The micro prefix is stored as U+03BC (GREEK SMALL LETTER MU). The visually
+identical U+00B5 (MICRO SIGN) is rewritten to it, which keeps one experiment's
+data from splitting into two groups that look the same on screen.
+
+A unit outside the list is accepted with a warning and stored as given. This is
+deliberate: not every reference object is a scale bar, and calibrating against a
+grid square or a body length is legitimate.
+
+```julia
+set_scale!(sess, 0.0, 0.0, 100.0, 0.0, 1.0, "grid square")  # warns, but calibrates
+```
+
+A calibration is saved and restored with the session — see below.
+
 ### Saving, loading, and exporting
 
 ```julia
@@ -182,8 +247,10 @@ sess2 = load_session("moths_session.toml")
 export_csv(sess, "moths_counts.csv")
 ```
 
-The TOML format preserves all session state (image path, dimensions, tags, points, and
-settings) so a session can be resumed exactly where it was left off.
+The TOML format preserves all session state (image path, dimensions, tags, points,
+scale calibration, and settings) so a session can be resumed exactly where it was
+left off. A session with no calibration writes no `[scale]` table at all, and
+session files written by earlier versions of ImageTally load as uncalibrated.
 
 ### Input validation
 
@@ -198,7 +265,10 @@ ImageTally validates arguments at the boundary of the public API and throws
 | `set_marker_size!(sess, size)` | `size` must be positive. Values above 200 produce a `@warn`. |
 | `add_tag!(sess, tag)` | Tag name must not already exist; total tag count must not exceed `MAX_TAGS` (10). |
 | `remove_tag!(sess, name)` | Cannot remove a tag that has counted points. |
-| `save_session` / `load_session` | Path must have a `.toml` extension; file must exist for loading. |
+| `set_scale!(sess, x1, y1, x2, y2, dist, unit)` | `dist` must be positive; `unit` must not be empty; the two points must not be coincident after clamping. A unit outside `VALID_UNITS` produces a `@warn` but still succeeds. |
+| `pixels_to_real(sess, px)` | The session must have a scale calibration. |
+| `real_to_pixels(sess, dist)` | The session must have a scale calibration. |
+| `save_session` / `load_session` | Path must have a `.toml` extension; file must exist for loading. A `[scale]` table in the file must be complete and well-formed. |
 | `export_csv` | Path must have a `.csv` extension. |
 
 ## Next steps
