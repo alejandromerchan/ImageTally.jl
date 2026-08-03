@@ -46,6 +46,13 @@
         @test session.next_id == 1
         @test session.marker_size == DEFAULT_MARKER_SIZE
 
+        # A session defaults to uncalibrated
+        @test session.has_scale == false
+        @test session.scale_real_distance == 0.0
+        @test session.scale_unit == ""
+        @test session.scale_point_1 == (0.0, 0.0)
+        @test session.scale_point_2 == (0.0, 0.0)
+
         # Defaults are fresh per session, not shared state
         other = CountSession(;
             image_path = "other.jpg",
@@ -101,7 +108,14 @@
         # There is no zero-argument constructor
         @test_throws UndefKeywordError CountSession()
 
-        # The positional constructor is retained
+        # The positional constructor is retained.
+        #
+        # This call is a deliberate tripwire: it is spelled out positionally so
+        # that adding a field to CountSession breaks it. That is the point — a
+        # break here means `@kwdef` is still generating a positional
+        # constructor whose argument order has changed, which is a documented
+        # part of the type's surface. The correct response to a failure is to
+        # EXTEND this call with the new field, never to delete it.
         positional = CountSession(
             "pos.jpg",
             100,
@@ -111,9 +125,15 @@
             1,
             "male",
             DEFAULT_MARKER_SIZE,
+            false,
+            0.0,
+            "",
+            (0.0, 0.0),
+            (0.0, 0.0),
         )
         @test positional.image_path == "pos.jpg"
         @test positional.active_tag == "male"
+        @test positional.has_scale == false
     end
 
     @testset "new_session" begin
