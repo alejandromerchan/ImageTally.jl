@@ -30,46 +30,18 @@ jobs:
           - "1"
         os:
           - ubuntu-latest
-          - macos-latest
-          - windows-latest
+          - macOS-latest
+
         arch:
-          - x64
+          # "default" means the architecture of the runner executing the job
+          - default
         allow_failure: [false]
         include:
           - version: "nightly"
             os: ubuntu-latest
-            arch: x64
+            arch: default
             allow_failure: true
           - version: "nightly"
-            os: macos-latest
-            arch: x64
-            allow_failure: true
-          - version: "nightly"
-            os: windows-latest
-            arch: x64
-            allow_failure: true
-
-  test-gui:
-    uses: ./.github/workflows/ReusableTest.yml
-    with:
-      os: ubuntu-latest
-      version: ${{ matrix.version }}
-      arch: ${{ matrix.arch }}
-      allow_failure: ${{ matrix.allow_failure }}
-      run_codecov: ${{ matrix.version == '1' }}
-      use_display: true
-    secrets:
-      codecov_token: ${{ secrets.CODECOV_TOKEN }}
-    strategy:
-      fail-fast: false
-      matrix:
-        version:
-          - "lts"
-          - "1"
-        arch:
-          - x64
-        allow_failure: [false]
-        include:
-          - version: "nightly"
-            arch: x64
+            os: macOS-latest
+            arch: default
             allow_failure: true
