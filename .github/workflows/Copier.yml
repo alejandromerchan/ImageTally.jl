@@ -9,9 +9,14 @@ jobs:
   Copier:
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/create-github-app-token@v2
+        id: app-token
+        with:
+          app-id: ${{ vars.BOT_APP_ID }}
+          private-key: ${{ secrets.BOT_PRIVATE_KEY }}
       - uses: actions/checkout@v7
         with:
-          token: ${{ secrets.COPIER_PAT }}
+          token: ${{ steps.app-token.outputs.token }}
       - uses: julia-actions/setup-julia@v3
         with:
           version: "1"
@@ -31,12 +36,15 @@ jobs:
       - name: Check for update in the template
         run: |
           pip install copier
-          copier update -A -l -o rej
+          # Write conflicts as inline markers so local customizations show up in
+          # the PR diff (and fail check-merge-conflict) instead of being dropped.
+          copier update -A -l -o inline
           echo -e "Automated changed by Copier.yml workflow\n" > /tmp/body.md
-          echo -e 'Rejected changes (if any):\n```diff\n' >> /tmp/body.md
-          find . -name "*.rej" | xargs cat >> /tmp/body.md
-          find . -name "*.rej" | xargs rm -f
-          echo -e '```' >> /tmp/body.md
+          conflicts=$(git grep -l '^<<<<<<< ' -- . || true)
+          if [ -n "$conflicts" ]; then
+            echo -e '> [!WARNING]\n> Merge conflicts with local customizations. Resolve the markers in these files before merging:\n' >> /tmp/body.md
+            echo "$conflicts" | sed 's/^/- `/; s/$/`/' >> /tmp/body.md
+          fi
           git diff
       - name: Run pre-commit to run the formatters
         run: |
