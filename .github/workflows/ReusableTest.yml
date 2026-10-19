@@ -17,8 +17,7 @@ on:
       arch:
         required: false
         type: string
-        # "default" means the architecture of the runner executing the job
-        default: default
+        default: x64
       allow_failure:
         required: false
         type: boolean
@@ -37,7 +36,7 @@ on:
 
 jobs:
   test:
-    name: "Julia ${{ inputs.version }} - ${{ inputs.os }} - arch: ${{ inputs.arch }} - ${{ github.event_name }}"
+    name: Julia ${{ inputs.version }} - ${{ inputs.os }} - ${{ inputs.arch }} - ${{ github.event_name }}
     runs-on: ${{ inputs.os }}
     continue-on-error: ${{ inputs.allow_failure }}
 
@@ -50,11 +49,21 @@ jobs:
       - name: Use Julia cache
         uses: julia-actions/cache@v3
       - uses: julia-actions/julia-buildpkg@v1
-      - uses: julia-actions/julia-runtest@v1
+      - name: Install Xvfb (Linux GUI tests only)
+        if: ${{ inputs.use_display && runner.os == 'Linux' }}
+        run: sudo apt-get update -qq && sudo apt-get install -y xvfb
+      - name: Run tests with GLMakie and virtual display (Linux GUI)
+        if: ${{ inputs.use_display && runner.os == 'Linux' }}
+        env:
+          IMAGETALLY_TEST_GUI: "true"
+        run: xvfb-run -s "-screen 0 1024x768x24" julia --project --code-coverage=user -e 'import Pkg; Pkg.test(coverage=true)'
+      - name: Run logic tests (no GLMakie required)
+        if: ${{ !inputs.use_display }}
+        uses: julia-actions/julia-runtest@v1
       - uses: julia-actions/julia-processcoverage@v1
         if: ${{ inputs.run_codecov }}
-      - uses: codecov/codecov-action@v4
+      - uses: codecov/codecov-action@v7
         if: ${{ inputs.run_codecov }}
         with:
-          file: lcov.info
+          files: lcov.info
           token: ${{ secrets.codecov_token }}

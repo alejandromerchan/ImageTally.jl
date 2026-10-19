@@ -34,12 +34,12 @@ License: MIT
 LicenseCopyrightHolders: H. Alejandro Merchan
 MarkdownIndentation: 2
 PackageName: ImageTally
-PackageOwner: H. Alejandro Merchan
+PackageOwner: alejandromerchan
 PackageUUID: 3a0688b7-cdea-55d2-b485-88f3d59bc26e
 RunJuliaNightlyOnCI: true
 StrategyConfirmIncluded: true
 StrategyLevel: 2
 StrategyReviewExcluded: false
 TestingStrategy: basic
-_commit: py-v0.2.0
+_commit: v0.20.0
 _src_path: https://github.com/JuliaBesties/BestieTemplate.jl
